@@ -57,10 +57,10 @@ const PdfUpload: React.FC<PdfUploadProps> = ({ onUploadSuccess }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-secondary">Upload PDF</h2>
+      <h2 className="text-2xl font-bold mb-6 text-secondary">Upload Book</h2>
       
       <div className="mb-4">
-        <label className="block text-gray-700 mb-2">Select PDF File</label>
+        <label className="block text-gray-700 mb-2">Select Book File</label>
         <input
           type="file"
           accept="application/pdf"
@@ -100,7 +100,7 @@ const PdfUpload: React.FC<PdfUploadProps> = ({ onUploadSuccess }) => {
         disabled={!file || uploading}
         className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
       >
-        {uploading ? 'Uploading...' : 'Upload PDF'}
+        {uploading ? 'Uploading...' : 'Upload Book'}
       </button>
     </div>
   );

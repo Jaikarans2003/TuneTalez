@@ -4,8 +4,12 @@
     {
       "collectionGroup": "pdfs",
       "fieldPath": "createdAt",
+      "ttl": false,
       "indexes": [
-        { "order": "DESCENDING", "queryScope": "COLLECTION" }
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        }
       ]
     }
   ]

@@ -1,12 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import BookForm from '@/components/book/BookForm';
+import { useAuth } from '@/context/AuthContext';
 
 export default function WritePage() {
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { user, loading } = useAuth();
+  
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/signin');
+    }
+  }, [user, loading, router]);
 
   // Handle successful book creation
   const handleSuccess = () => {

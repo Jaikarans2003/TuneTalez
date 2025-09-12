@@ -1,0 +1,12 @@
+{
+  "/favicon.ico/route": "/favicon.ico",
+  "/_not-found/page": "/_not-found",
+  "/admin/page": "/admin",
+  "/page": "/",
+  "/profile/page": "/profile",
+  "/auth/signin/page": "/auth/signin",
+  "/upload/page": "/upload",
+  "/view/[id]/page": "/view/[id]",
+  "/write/page": "/write",
+  "/read/[id]/page": "/read/[id]"
+}

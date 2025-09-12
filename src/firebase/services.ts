@@ -1,6 +1,7 @@
 import { db, storage } from './config';
-import { collection, addDoc, getDocs, getDoc, doc, deleteDoc, query, orderBy, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, getDoc, doc, deleteDoc, query, orderBy, where, setDoc } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { User } from 'firebase/auth';
 
 // Interface for PDF document
 export interface PdfDocument {
@@ -8,6 +9,7 @@ export interface PdfDocument {
   name: string;
   url: string;
   createdAt: number;
+  description?: string;
 }
 
 // Upload PDF to Firebase Storage
@@ -87,6 +89,71 @@ export const deletePdf = async (pdfDoc: PdfDocument): Promise<void> => {
     await deleteObject(storageRef);
   } catch (error) {
     console.error('Error deleting PDF:', error);
+    throw error;
+  }
+};
+
+// Interface for User Profile
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  role: 'reader' | 'author' | 'admin';
+  createdAt: number;
+}
+
+// Create or update user profile
+export const createUserProfile = async (user: User, role: 'reader' | 'author' | 'admin' = 'reader'): Promise<UserProfile> => {
+  try {
+    const userProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email || '',
+      displayName: user.displayName || '',
+      photoURL: user.photoURL || '',
+      role: role,
+      createdAt: Date.now()
+    };
+
+    // Use setDoc with merge option to create or update the document
+    await setDoc(doc(db, 'users', user.uid), userProfile, { merge: true });
+    return userProfile;
+  } catch (error) {
+    console.error('Error creating user profile:', error);
+    throw error;
+  }
+};
+
+// Get user profile
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      return userDoc.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    throw error;
+  }
+};
+
+// Update user role
+export const updateUserRole = async (uid: string, role: 'reader' | 'author' | 'admin'): Promise<void> => {
+  try {
+    await setDoc(doc(db, 'users', uid), { role }, { merge: true });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    throw error;
+  }
+};
+
+// Set a user as admin (should be used carefully)
+export const setUserAsAdmin = async (uid: string): Promise<void> => {
+  try {
+    await updateUserRole(uid, 'admin');
+  } catch (error) {
+    console.error('Error setting user as admin:', error);
     throw error;
   }
 };
