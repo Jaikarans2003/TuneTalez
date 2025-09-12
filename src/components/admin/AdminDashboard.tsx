@@ -9,6 +9,7 @@ import ContentManagement from './ContentManagement';
 import AdminStats from './AdminStats';
 import AdminDirectUploadForm from './AdminDirectUploadForm';
 import AdminPdfUpload from './AdminPdfUpload';
+import AdminBookForm from './AdminBookForm';
 import { useRouter } from 'next/navigation';
 
 type TabType = 'stats' | 'users' | 'content' | 'write' | 'upload';
@@ -107,7 +108,7 @@ export default function AdminDashboard() {
               <p className="text-gray-300">Redirecting to content management...</p>
             </div>
           ) : (
-            <AdminDirectUploadForm onSuccess={handleBookSuccess} />
+            <AdminBookForm onSuccess={handleBookSuccess} />
           )
         )}
         {activeTab === 'upload' && (

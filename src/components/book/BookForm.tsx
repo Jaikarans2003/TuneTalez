@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useRef, useEffect, ChangeEvent, FormEvent } from 'react';
-import { uploadBookThumbnail, createBook } from '@/firebase/services';
+import { uploadBookThumbnail, createBook, Chapter } from '@/firebase/services';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
+import ChaptersManager from './ChaptersManager';
 
 interface BookFormProps {
   onSuccess?: () => void;
@@ -128,6 +129,9 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chaptersError, setChaptersError] = useState<string>('');
+  const [publishMode, setPublishMode] = useState<'single' | 'episodes'>('single');
 
   // Handle thumbnail selection
   const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -168,7 +172,7 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       }),
       Underline,
       Placeholder.configure({
-        placeholder: 'Write your book content here...',
+        placeholder: 'Write your book description here...',
       }),
     ],
     content: content,
@@ -182,8 +186,8 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       const html = editor.getHTML();
       setContent(html);
       
-      if (!html.trim()) {
-        setContentError('Content is required');
+      if (publishMode === 'single' && !html.trim()) {
+        setContentError('Content is required for single-chapter books');
       } else {
         setContentError('');
       }
@@ -206,6 +210,35 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
     }
   }, [uploading, editor]);
 
+  // Handle chapters change
+  const handleChaptersChange = (updatedChapters: Chapter[]) => {
+    setChapters(updatedChapters);
+    
+    if (publishMode === 'episodes' && updatedChapters.length === 0) {
+      setChaptersError('At least one episode is required');
+    } else {
+      setChaptersError('');
+    }
+  };
+
+  // Handle publish mode change
+  const handlePublishModeChange = (mode: 'single' | 'episodes') => {
+    setPublishMode(mode);
+    
+    // Reset validation errors based on new mode
+    if (mode === 'single') {
+      setChaptersError('');
+      if (!content.trim()) {
+        setContentError('Content is required for single-chapter books');
+      }
+    } else {
+      setContentError('');
+      if (chapters.length === 0) {
+        setChaptersError('At least one episode is required');
+      }
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -226,12 +259,20 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       setAuthorError('');
     }
     
-    if (!content.trim()) {
+    if (publishMode === 'single' && !content.trim()) {
       setContentError('Content is required');
       setError('Please enter book content');
       return;
     } else {
       setContentError('');
+    }
+
+    if (publishMode === 'episodes' && chapters.length === 0) {
+      setChaptersError('At least one episode is required');
+      setError('Please add at least one episode');
+      return;
+    } else {
+      setChaptersError('');
     }
     
     if (!tagsInput.trim()) {
@@ -262,13 +303,37 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
       
+      // Prepare chapters data
+      let finalChapters: Chapter[] = [];
+      
+      if (publishMode === 'single') {
+        // For single mode, create one chapter with the main content
+        finalChapters = [{
+          id: `chapter_${Date.now()}`,
+          title: 'Main Content',
+          content: content.trim(),
+          order: 0,
+          createdAt: Date.now()
+        }];
+      } else {
+        // For episodes mode, use the chapters from state
+        // Filter out any invalid chapters
+        finalChapters = chapters
+          .filter(chapter => chapter.title && chapter.content)
+          .map((chapter, index) => ({
+            ...chapter,
+            order: index
+          }));
+      }
+      
       // Create book document
       const result = await createBook({
         title: title.trim(),
-        content: content.trim(),
+        content: publishMode === 'single' ? content.trim() : '', // Only use content for single mode
         author: author.trim(),
         tags,
-        thumbnailUrl
+        thumbnailUrl,
+        chapters: finalChapters
       });
       
       console.log('Book created successfully:', result);
@@ -281,6 +346,7 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       setThumbnail(null);
       setThumbnailPreview(null);
       setUploadProgress(0);
+      setChapters([]);
       
       // Call onSuccess callback if provided
       if (onSuccess) {
@@ -321,6 +387,7 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
             disabled={uploading}
             required
           />
+          {titleError && <p className="text-red-500 text-sm mt-1">{titleError}</p>}
         </div>
         
         {/* Author */}
@@ -338,12 +405,13 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
             disabled={uploading}
             required
           />
+          {authorError && <p className="text-red-500 text-sm mt-1">{authorError}</p>}
         </div>
         
         {/* Tags */}
         <div className="mb-4">
           <label htmlFor="tags" className="block text-sm font-medium text-gray-300 mb-1">
-            Tags (comma separated)
+            Tags (comma separated) *
           </label>
           <input
             type="text"
@@ -353,7 +421,9 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
             className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-[#2a2a2a] text-white"
             placeholder="fiction, fantasy, adventure"
             disabled={uploading}
+            required
           />
+          {tagsError && <p className="text-red-500 text-sm mt-1">{tagsError}</p>}
         </div>
         
         {/* Thumbnail */}
@@ -395,28 +465,72 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
           )}
         </div>
         
-        {/* Content */}
+        {/* Publishing Mode Selection */}
         <div className="mb-6">
-          <label htmlFor="content" className="block text-sm font-medium text-gray-300 mb-1">
-            Book Content *
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Publishing Mode
           </label>
-          
-          {/* Tiptap Editor */}
-          <div className="border border-gray-600 rounded-md focus-within:ring-2 focus-within:ring-primary overflow-hidden">
-            {!editorLoaded ? (
-              <div className="w-full px-3 py-2 bg-[#2a2a2a] text-white min-h-[300px] flex items-center justify-center">
-                <p>Loading editor...</p>
-              </div>
-            ) : (
-              <div className="bg-[#2a2a2a]">
-                <MenuBar editor={editor} />
-                <EditorContent editor={editor} className="prose-invert" />
-              </div>
-            )}
+          <div className="flex space-x-4">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="publishMode"
+                checked={publishMode === 'single'}
+                onChange={() => handlePublishModeChange('single')}
+                className="mr-2"
+                disabled={uploading}
+              />
+              <span>Single Chapter</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="publishMode"
+                checked={publishMode === 'episodes'}
+                onChange={() => handlePublishModeChange('episodes')}
+                className="mr-2"
+                disabled={uploading}
+              />
+              <span>Multiple Episodes</span>
+            </label>
           </div>
-          <p className="text-xs text-gray-400 mt-1">Use the toolbar to format your content</p>
-          {contentError && <p className="text-red-500 text-sm mt-1">{contentError}</p>}
         </div>
+        
+        {/* Content - Show only in single mode */}
+        {publishMode === 'single' && (
+          <div className="mb-6">
+            <label htmlFor="content" className="block text-sm font-medium text-gray-300 mb-1">
+              Book Content *
+            </label>
+            
+            {/* Tiptap Editor */}
+            <div className="border border-gray-600 rounded-md focus-within:ring-2 focus-within:ring-primary overflow-hidden">
+              {!editorLoaded ? (
+                <div className="w-full px-3 py-2 bg-[#2a2a2a] text-white min-h-[300px] flex items-center justify-center">
+                  <p>Loading editor...</p>
+                </div>
+              ) : (
+                <div className="bg-[#2a2a2a]">
+                  <MenuBar editor={editor} />
+                  <EditorContent editor={editor} className="prose-invert" />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Use the toolbar to format your content</p>
+            {contentError && <p className="text-red-500 text-sm mt-1">{contentError}</p>}
+          </div>
+        )}
+        
+        {/* Chapters Manager - Show only in episodes mode */}
+        {publishMode === 'episodes' && (
+          <div className="mb-6">
+            <ChaptersManager 
+              chapters={chapters} 
+              onChange={handleChaptersChange} 
+            />
+            {chaptersError && <p className="text-red-500 text-sm mt-1">{chaptersError}</p>}
+          </div>
+        )}
         
         {/* Upload Progress */}
         {uploading && (
@@ -427,7 +541,7 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
                 style={{ width: `${uploadProgress}%` }}
               ></div>
             </div>
-            <p className="text-sm text-gray-600 mt-1">{Math.round(uploadProgress)}% uploaded</p>
+            <p className="text-sm text-gray-400 mt-1">{Math.round(uploadProgress)}% uploaded</p>
           </div>
         )}
         

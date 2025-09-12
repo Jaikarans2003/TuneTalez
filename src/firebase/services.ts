@@ -158,15 +158,26 @@ export const setUserAsAdmin = async (uid: string): Promise<void> => {
   }
 };
 
+// Interface for Chapter/Episode
+export interface Chapter {
+  id?: string;
+  title: string;
+  content: string;
+  order: number;
+  createdAt: number;
+}
+
 // Interface for Book document
 export interface BookDocument {
   id?: string;
   title: string;
-  content: string;
+  content?: string; // Main description/intro content (optional now)
   author: string;
   tags: string[];
   thumbnailUrl: string;
   createdAt: number;
+  chapters: Chapter[]; // Array of chapters/episodes
+  lastUpdated?: number; // Track when the book was last updated
 }
 
 // Upload Book Thumbnail to Firebase Storage
@@ -211,11 +222,15 @@ export const uploadBookThumbnail = async (file: File, onProgress?: (progress: nu
 };
 
 // Create a new book in Firestore
-export const createBook = async (book: Omit<BookDocument, 'id' | 'createdAt'>): Promise<BookDocument> => {
+export const createBook = async (book: Omit<BookDocument, 'id' | 'createdAt' | 'lastUpdated'>): Promise<BookDocument> => {
   try {
+    const timestamp = Date.now();
     const bookDoc: Omit<BookDocument, 'id'> = {
       ...book,
-      createdAt: Date.now(),
+      createdAt: timestamp,
+      lastUpdated: timestamp,
+      // Ensure chapters array exists
+      chapters: book.chapters || []
     };
     
     const docRef = await addDoc(collection(db, 'books'), bookDoc);
@@ -282,6 +297,166 @@ export const deleteBook = async (book: BookDocument): Promise<void> => {
     }
   } catch (error) {
     console.error('Error deleting book:', error);
+    throw error;
+  }
+};
+
+// Add a new chapter to a book
+export const addChapter = async (bookId: string, chapter: Omit<Chapter, 'id' | 'createdAt'>): Promise<Chapter> => {
+  try {
+    if (!bookId) throw new Error('Book ID is required');
+    
+    // Get the current book
+    const bookRef = doc(db, 'books', bookId);
+    const bookSnap = await getDoc(bookRef);
+    
+    if (!bookSnap.exists()) {
+      throw new Error('Book not found');
+    }
+    
+    const bookData = bookSnap.data() as BookDocument;
+    const chapters = bookData.chapters || [];
+    
+    // Create new chapter with ID and timestamp
+    const newChapter: Chapter = {
+      ...chapter,
+      id: `chapter_${Date.now()}`, // Generate a unique ID
+      createdAt: Date.now(),
+    };
+    
+    // Add chapter to the book
+    const updatedChapters = [...chapters, newChapter];
+    
+    // Update the book document
+    await setDoc(bookRef, { 
+      chapters: updatedChapters,
+      lastUpdated: Date.now()
+    }, { merge: true });
+    
+    return newChapter;
+  } catch (error) {
+    console.error('Error adding chapter:', error);
+    throw error;
+  }
+};
+
+// Update an existing chapter
+export const updateChapter = async (bookId: string, chapterId: string, updates: Partial<Omit<Chapter, 'id' | 'createdAt'>>): Promise<Chapter> => {
+  try {
+    if (!bookId) throw new Error('Book ID is required');
+    if (!chapterId) throw new Error('Chapter ID is required');
+    
+    // Get the current book
+    const bookRef = doc(db, 'books', bookId);
+    const bookSnap = await getDoc(bookRef);
+    
+    if (!bookSnap.exists()) {
+      throw new Error('Book not found');
+    }
+    
+    const bookData = bookSnap.data() as BookDocument;
+    const chapters = bookData.chapters || [];
+    
+    // Find the chapter to update
+    const chapterIndex = chapters.findIndex(ch => ch.id === chapterId);
+    if (chapterIndex === -1) {
+      throw new Error('Chapter not found');
+    }
+    
+    // Update the chapter
+    const updatedChapter = {
+      ...chapters[chapterIndex],
+      ...updates
+    };
+    
+    // Replace the chapter in the array
+    const updatedChapters = [...chapters];
+    updatedChapters[chapterIndex] = updatedChapter;
+    
+    // Update the book document
+    await setDoc(bookRef, { 
+      chapters: updatedChapters,
+      lastUpdated: Date.now()
+    }, { merge: true });
+    
+    return updatedChapter;
+  } catch (error) {
+    console.error('Error updating chapter:', error);
+    throw error;
+  }
+};
+
+// Delete a chapter
+export const deleteChapter = async (bookId: string, chapterId: string): Promise<void> => {
+  try {
+    if (!bookId) throw new Error('Book ID is required');
+    if (!chapterId) throw new Error('Chapter ID is required');
+    
+    // Get the current book
+    const bookRef = doc(db, 'books', bookId);
+    const bookSnap = await getDoc(bookRef);
+    
+    if (!bookSnap.exists()) {
+      throw new Error('Book not found');
+    }
+    
+    const bookData = bookSnap.data() as BookDocument;
+    const chapters = bookData.chapters || [];
+    
+    // Filter out the chapter to delete
+    const updatedChapters = chapters.filter(ch => ch.id !== chapterId);
+    
+    // Update the book document
+    await setDoc(bookRef, { 
+      chapters: updatedChapters,
+      lastUpdated: Date.now()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error deleting chapter:', error);
+    throw error;
+  }
+};
+
+// Reorder chapters
+export const reorderChapters = async (bookId: string, newOrder: string[]): Promise<void> => {
+  try {
+    if (!bookId) throw new Error('Book ID is required');
+    
+    // Get the current book
+    const bookRef = doc(db, 'books', bookId);
+    const bookSnap = await getDoc(bookRef);
+    
+    if (!bookSnap.exists()) {
+      throw new Error('Book not found');
+    }
+    
+    const bookData = bookSnap.data() as BookDocument;
+    const chapters = bookData.chapters || [];
+    
+    // Create a map of chapters by ID for quick lookup
+    const chaptersMap = new Map(chapters.map(chapter => [chapter.id, chapter]));
+    
+    // Create the new ordered array
+    const reorderedChapters = newOrder
+      .map((id, index) => {
+        const chapter = chaptersMap.get(id);
+        if (!chapter) return null;
+        
+        // Update the order property
+        return {
+          ...chapter,
+          order: index
+        };
+      })
+      .filter((chapter): chapter is Chapter => chapter !== null);
+    
+    // Update the book document
+    await setDoc(bookRef, { 
+      chapters: reorderedChapters,
+      lastUpdated: Date.now()
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error reordering chapters:', error);
     throw error;
   }
 };

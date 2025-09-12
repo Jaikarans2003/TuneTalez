@@ -27,7 +27,7 @@ const BookCard = ({ book, onDelete }: BookCardProps) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-end p-4">
           <Link 
-            href={`/read/${book.id}`} 
+            href={`/book/${book.id}`} 
             className="w-full text-center text-white font-bold py-3 px-4 rounded-lg bg-primary hover:bg-red-700 transition-colors duration-300 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 shadow-lg"
           >
             Read Now

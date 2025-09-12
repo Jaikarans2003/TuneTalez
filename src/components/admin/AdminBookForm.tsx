@@ -1,72 +1,570 @@
 'use client';
 
-import BookForm from '@/components/book/BookForm';
-import { useEffect, useState } from 'react';
-import { auth } from '@/firebase/config';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useState, useRef, useEffect, ChangeEvent, FormEvent } from 'react';
+import { uploadBookThumbnail, createBook, Chapter, BookDocument } from '@/firebase/services';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import Placeholder from '@tiptap/extension-placeholder';
+import ChaptersManager from '../book/ChaptersManager';
 
 interface AdminBookFormProps {
   onSuccess?: () => void;
+  existingBook?: BookDocument; // For editing existing books
 }
 
-// Admin credentials for Firebase authentication
-// These should match your default admin credentials
-const ADMIN_EMAIL = 'admin@tunetalez.com';
-const ADMIN_PASSWORD = 'admin123';
+// Tiptap MenuBar component
+const MenuBar = ({ editor }: { editor: any }) => {
+  if (!editor) {
+    return null;
+  }
 
-export default function AdminBookForm({ onSuccess }: AdminBookFormProps) {
-  const [authenticating, setAuthenticating] = useState(true);
+  return (
+    <div className="border-b border-gray-600 p-1 flex flex-wrap gap-1 bg-[#333333]">
+      <button
+        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        className={`p-1 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Heading 1"
+      >
+        H1
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        className={`p-1 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Heading 2"
+      >
+        H2
+      </button>
+      <button
+        onClick={() => editor.chain().focus().setParagraph().run()}
+        className={`p-1 rounded ${editor.isActive('paragraph') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Paragraph"
+      >
+        P
+      </button>
+      <span className="mx-1 text-gray-500">|</span>
+      <button
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        className={`p-1 rounded ${editor.isActive('bold') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Bold"
+      >
+        <strong>B</strong>
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        className={`p-1 rounded ${editor.isActive('italic') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Italic"
+      >
+        <em>I</em>
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+        className={`p-1 rounded ${editor.isActive('underline') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Underline"
+      >
+        <u>U</u>
+      </button>
+      <span className="mx-1 text-gray-500">|</span>
+      <button
+        onClick={() => editor.chain().focus().setTextAlign('left').run()}
+        className={`p-1 rounded ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Align left"
+      >
+        ←
+      </button>
+      <button
+        onClick={() => editor.chain().focus().setTextAlign('center').run()}
+        className={`p-1 rounded ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Align center"
+      >
+        ↔
+      </button>
+      <button
+        onClick={() => editor.chain().focus().setTextAlign('right').run()}
+        className={`p-1 rounded ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Align right"
+      >
+        →
+      </button>
+      <span className="mx-1 text-gray-500">|</span>
+      <button
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        className={`p-1 rounded ${editor.isActive('bulletList') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Bullet list"
+      >
+        • List
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        className={`p-1 rounded ${editor.isActive('orderedList') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
+        title="Numbered list"
+      >
+        1. List
+      </button>
+      <span className="mx-1 text-gray-500">|</span>
+      <button
+        onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+        className="p-1 rounded bg-[#444444] hover:bg-gray-600"
+        title="Clear formatting"
+      >
+        Clear
+      </button>
+    </div>
+  );
+}
+
+const AdminBookForm = ({ onSuccess, existingBook }: AdminBookFormProps) => {
+  const [title, setTitle] = useState(existingBook?.title || '');
+  const [titleError, setTitleError] = useState<string>('');
+  const [content, setContent] = useState<string>(existingBook?.content || '');
+  const [contentError, setContentError] = useState<string>('');
+  const [editorLoaded, setEditorLoaded] = useState(false);
+  const [author, setAuthor] = useState(existingBook?.author || '');
+  const [authorError, setAuthorError] = useState<string>('');
+  const [tagsInput, setTagsInput] = useState(existingBook?.tags ? existingBook.tags.join(', ') : '');
+  const [tagsError, setTagsError] = useState<string>('');
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(existingBook?.thumbnailUrl || null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [chapters, setChapters] = useState<Chapter[]>(existingBook?.chapters || []);
+  const [chaptersError, setChaptersError] = useState<string>('');
+  const [publishMode, setPublishMode] = useState<'single' | 'episodes'>(
+    existingBook?.chapters && existingBook.chapters.length > 1 ? 'episodes' : 'single'
+  );
 
-  // Authenticate with Firebase when component mounts
-  useEffect(() => {
-    const authenticateAdmin = async () => {
-      try {
-        // Check if we're already authenticated
-        if (auth.currentUser) {
-          setAuthenticating(false);
+  // Handle thumbnail selection
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      // Validate file type
+      if (!file.type.includes('image/')) {
+        setError('Please select an image file');
           return;
         }
 
-        // Sign in with admin credentials
-        await signInWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
-        setAuthenticating(false);
-      } catch (err) {
-        console.error('Error authenticating admin for uploads:', err);
-        setError('Failed to authenticate for file uploads. Please check your Firebase configuration.');
-        setAuthenticating(false);
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size should be less than 5MB');
+          return;
+        }
+
+      setThumbnail(file);
+      setError(null);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setThumbnailPreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Initialize Tiptap editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+        alignments: ['left', 'center', 'right'],
+      }),
+      Underline,
+      Placeholder.configure({
+        placeholder: 'Write your book description here...',
+      }),
+    ],
+    content: content,
+    editorProps: {
+      attributes: {
+        class: 'prose prose-invert max-w-none focus:outline-none min-h-[300px] p-4 text-white',
+        dir: 'ltr',
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      setContent(html);
+      
+      if (publishMode === 'single' && !html.trim()) {
+        setContentError('Content is required for single-chapter books');
+      } else {
+        setContentError('');
       }
-    };
+    },
+    // Fix SSR hydration issues
+    immediatelyRender: false,
+  });
+  
+  // Set editor loaded state when editor is ready
+  useEffect(() => {
+    if (editor) {
+      setEditorLoaded(true);
+    }
+  }, [editor]);
+  
+  // Disable/enable editor when uploading status changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!uploading);
+    }
+  }, [uploading, editor]);
 
-    authenticateAdmin();
+  // Handle chapters change
+  const handleChaptersChange = (updatedChapters: Chapter[]) => {
+    setChapters(updatedChapters);
+    
+    if (publishMode === 'episodes' && updatedChapters.length === 0) {
+      setChaptersError('At least one episode is required');
+    } else {
+      setChaptersError('');
+    }
+  };
 
-    // Clean up on unmount
-    return () => {
-      // We don't sign out because it would affect other parts of the app
-    };
-  }, []);
+  // Handle publish mode change
+  const handlePublishModeChange = (mode: 'single' | 'episodes') => {
+    setPublishMode(mode);
+    
+    // Reset validation errors based on new mode
+    if (mode === 'single') {
+      setChaptersError('');
+      if (!content.trim()) {
+        setContentError('Content is required for single-chapter books');
+      }
+    } else {
+      setContentError('');
+      if (chapters.length === 0) {
+        setChaptersError('At least one episode is required');
+      }
+    }
+  };
 
-  if (authenticating) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-        <span className="ml-2">Preparing editor...</span>
-      </div>
-    );
-  }
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!title.trim()) {
+      setTitleError('Title is required');
+      setError('Please enter a book title');
+      return;
+    } else {
+      setTitleError('');
+    }
+    
+    if (!author.trim()) {
+      setAuthorError('Author is required');
+      setError('Please enter an author name');
+      return;
+    } else {
+      setAuthorError('');
+    }
+    
+    if (publishMode === 'single' && !content.trim()) {
+      setContentError('Content is required');
+      setError('Please enter book content');
+      return;
+    } else {
+      setContentError('');
+    }
 
-  if (error) {
-    return (
-      <div className="p-6 bg-red-100 border border-red-400 text-red-700 rounded">
-        <h3 className="font-bold mb-2">Authentication Error</h3>
-        <p>{error}</p>
-        <p className="mt-2">
-          To fix this issue, please create a Firebase user with email "{ADMIN_EMAIL}" and password "{ADMIN_PASSWORD}",
-          then assign it the admin role.
-        </p>
-      </div>
-    );
-  }
+    if (publishMode === 'episodes' && chapters.length === 0) {
+      setChaptersError('At least one episode is required');
+      setError('Please add at least one episode');
+      return;
+    } else {
+      setChaptersError('');
+    }
+    
+    if (!tagsInput.trim()) {
+      setTagsError('At least one tag is required');
+      setError('Please add at least one tag');
+      return;
+    } else {
+      setTagsError('');
+    }
+    
+    if (!thumbnailPreview) {
+      setError('Please upload a thumbnail image');
+      return;
+    }
+    
+    try {
+      setUploading(true);
+      setError(null);
+      
+      let thumbnailUrl = existingBook?.thumbnailUrl || '';
+      
+      // Upload thumbnail if a new one was selected
+      if (thumbnail) {
+        thumbnailUrl = await uploadBookThumbnail(thumbnail, (progress) => {
+          setUploadProgress(progress);
+        });
+      }
+      
+      // Process tags (split by commas and trim)
+      const tags = tagsInput
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+      
+      // Prepare chapters data
+      let finalChapters: Chapter[] = [];
+      
+      if (publishMode === 'single') {
+        // For single mode, create one chapter with the main content
+        finalChapters = [{
+          id: existingBook?.chapters?.[0]?.id || `chapter_${Date.now()}`,
+          title: 'Main Content',
+          content: content.trim(),
+          order: 0,
+          createdAt: existingBook?.chapters?.[0]?.createdAt || Date.now()
+        }];
+      } else {
+        // For episodes mode, use the chapters from state
+        // Filter out any invalid chapters
+        finalChapters = chapters
+          .filter(chapter => chapter.title && chapter.content)
+          .map((chapter, index) => ({
+            ...chapter,
+            order: index
+          }));
+      }
+      
+      // Create book document
+      const result = await createBook({
+        title: title.trim(),
+        content: publishMode === 'single' ? content.trim() : '', // Only use content for single mode
+        author: author.trim(),
+        tags,
+        thumbnailUrl,
+        chapters: finalChapters
+      });
+      
+      console.log('Book created successfully:', result);
+      
+      // Reset form if not editing
+      if (!existingBook) {
+        setTitle('');
+        setContent('');
+        setAuthor('');
+        setTagsInput('');
+        setThumbnail(null);
+        setThumbnailPreview(null);
+        setUploadProgress(0);
+        setChapters([]);
+      }
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
+    } catch (err: any) {
+      console.error('Error creating book:', err);
+      setError(`Failed to create book: ${err.message || 'Please try again.'}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
-  return <BookForm onSuccess={onSuccess} />;
-}
+  return (
+    <div className="max-w-4xl mx-auto p-6 bg-[#1F1F1F] rounded-lg shadow-md text-white">
+      <h2 className="text-2xl font-bold mb-6">{existingBook ? 'Edit Book' : 'Create New Book'}</h2>
+      
+      {error && (
+        <div className="mb-4 p-3 bg-red-900 border border-red-700 text-white rounded">
+          {error}
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit}>
+        {/* Title */}
+        <div className="mb-4">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
+            Book Title *
+          </label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-[#2a2a2a] text-white"
+            placeholder="Enter book title"
+            disabled={uploading}
+            required
+          />
+          {titleError && <p className="text-red-500 text-sm mt-1">{titleError}</p>}
+        </div>
+        
+        {/* Author */}
+        <div className="mb-4">
+          <label htmlFor="author" className="block text-sm font-medium text-gray-300 mb-1">
+            Author Name *
+          </label>
+          <input
+            type="text"
+            id="author"
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-[#2a2a2a] text-white"
+            placeholder="Enter author name"
+            disabled={uploading}
+            required
+          />
+          {authorError && <p className="text-red-500 text-sm mt-1">{authorError}</p>}
+        </div>
+        
+        {/* Tags */}
+        <div className="mb-4">
+          <label htmlFor="tags" className="block text-sm font-medium text-gray-300 mb-1">
+            Tags (comma separated) *
+          </label>
+          <input
+            type="text"
+            id="tags"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-[#2a2a2a] text-white"
+            placeholder="fiction, fantasy, adventure"
+            disabled={uploading}
+            required
+          />
+          {tagsError && <p className="text-red-500 text-sm mt-1">{tagsError}</p>}
+        </div>
+        
+        {/* Thumbnail */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Book Thumbnail *
+          </label>
+          <div className="flex items-center space-x-4">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-2 bg-[#333333] text-white rounded hover:bg-[#444444] transition-colors disabled:bg-[#222222]"
+              disabled={uploading}
+            >
+              {thumbnailPreview ? 'Change Image' : 'Select Image'}
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleThumbnailChange}
+              className="hidden"
+              accept="image/*"
+              disabled={uploading}
+            />
+            <span className="text-sm text-gray-400">
+              {thumbnail ? thumbnail.name : thumbnailPreview ? 'Current thumbnail' : 'No file selected'}
+            </span>
+          </div>
+          
+          {/* Thumbnail Preview */}
+          {thumbnailPreview && (
+            <div className="mt-2">
+              <img 
+                src={thumbnailPreview} 
+                alt="Thumbnail preview" 
+                className="h-40 object-cover rounded border border-gray-300" 
+              />
+            </div>
+          )}
+        </div>
+        
+        {/* Publishing Mode Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Publishing Mode
+          </label>
+          <div className="flex space-x-4">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="publishMode"
+                checked={publishMode === 'single'}
+                onChange={() => handlePublishModeChange('single')}
+                className="mr-2"
+                disabled={uploading}
+              />
+              <span>Single Chapter</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="publishMode"
+                checked={publishMode === 'episodes'}
+                onChange={() => handlePublishModeChange('episodes')}
+                className="mr-2"
+                disabled={uploading}
+              />
+              <span>Multiple Episodes</span>
+            </label>
+          </div>
+        </div>
+        
+        {/* Content - Show only in single mode */}
+        {publishMode === 'single' && (
+          <div className="mb-6">
+            <label htmlFor="content" className="block text-sm font-medium text-gray-300 mb-1">
+              Book Content *
+            </label>
+            
+            {/* Tiptap Editor */}
+            <div className="border border-gray-600 rounded-md focus-within:ring-2 focus-within:ring-primary overflow-hidden">
+              {!editorLoaded ? (
+                <div className="w-full px-3 py-2 bg-[#2a2a2a] text-white min-h-[300px] flex items-center justify-center">
+                  <p>Loading editor...</p>
+                </div>
+              ) : (
+                <div className="bg-[#2a2a2a]">
+                  <MenuBar editor={editor} />
+                  <EditorContent editor={editor} className="prose-invert" />
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Use the toolbar to format your content</p>
+            {contentError && <p className="text-red-500 text-sm mt-1">{contentError}</p>}
+          </div>
+        )}
+        
+        {/* Chapters Manager - Show only in episodes mode */}
+        {publishMode === 'episodes' && (
+          <div className="mb-6">
+            <ChaptersManager 
+              chapters={chapters} 
+              onChange={handleChaptersChange} 
+            />
+            {chaptersError && <p className="text-red-500 text-sm mt-1">{chaptersError}</p>}
+          </div>
+        )}
+        
+        {/* Upload Progress */}
+        {uploading && (
+          <div className="mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div 
+                className="bg-primary h-2.5 rounded-full" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-400 mt-1">{Math.round(uploadProgress)}% uploaded</p>
+          </div>
+        )}
+        
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={uploading}
+          className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-primary-dark transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          {uploading ? 'Publishing...' : existingBook ? 'Update Book' : 'Publish Book'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
+export default AdminBookForm;
