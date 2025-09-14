@@ -54,7 +54,10 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
 
       // If using default admin credentials, don't verify in Firestore
       if (session.isDefaultAdmin) {
-        setAdminSession(session);
+        // Only set if different to avoid infinite renders
+        if (!adminSession || adminSession.uid !== session.uid) {
+          setAdminSession(session);
+        }
         return true;
       }
 
@@ -67,7 +70,10 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
-      setAdminSession(session);
+      // Only set if different to avoid infinite renders
+      if (!adminSession || adminSession.uid !== session.uid) {
+        setAdminSession(session);
+      }
       return true;
     } catch (error) {
       console.error('Error checking admin status:', error);
@@ -96,7 +102,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initAdminAuth();
-  }, [pathname, router]);
+  }, [pathname]);
 
   // Periodically check if the session is still valid
   useEffect(() => {
@@ -110,7 +116,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     }, 5 * 60 * 1000); // Check every 5 minutes
 
     return () => clearInterval(interval);
-  }, [adminSession, pathname, router]);
+  }, [adminSession, pathname]);
 
   return (
     <AdminAuthContext.Provider value={{ adminSession, loading, logout, checkAdminStatus }}>

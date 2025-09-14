@@ -1,20 +1,25 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { UserProfile } from '@/firebase/services';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 interface HeaderProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ isOpen, setIsOpen }) => {
+function HeaderContent({ isOpen, setIsOpen }: HeaderProps) {
   const { user, profile, logout, updateRole } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const handleLogout = async () => {
     try {
@@ -27,6 +32,16 @@ const Header: React.FC<HeaderProps> = ({ isOpen, setIsOpen }) => {
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
   };
+
+  // Initialize search input from URL if on homepage
+  useEffect(() => {
+    if (pathname === '/') {
+      const q = searchParams.get('q');
+      if (q) {
+        setSearchInput(q);
+      }
+    }
+  }, [pathname, searchParams]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -41,9 +56,26 @@ const Header: React.FC<HeaderProps> = ({ isOpen, setIsOpen }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+  
+  // Handle search submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (pathname === '/') {
+      // Update URL with search query
+      const params = new URLSearchParams();
+      if (searchInput.trim()) {
+        params.set('q', searchInput.trim());
+      }
+      router.push(`/?${params.toString()}`);
+    } else {
+      // Navigate to home page with search query
+      router.push(`/?q=${encodeURIComponent(searchInput.trim())}`);
+    }
+  };
 
   return (
-    <header className="bg-[#212121] text-white sticky top-0 z-50 shadow-md">
+    <header className="bg-[#212121] text-white sticky top-0 z-50">
       <div className="container mx-auto px-4 py-2 flex items-center justify-between">
         {/* Left section - Menu toggle and Logo */}
         <div className="flex items-center">
@@ -64,18 +96,28 @@ const Header: React.FC<HeaderProps> = ({ isOpen, setIsOpen }) => {
         
         {/* Middle section - Search bar */}
         <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-          <div className="relative w-full">
+          <form onSubmit={handleSearch} className="relative w-full">
             <input 
               type="text" 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search books and PDFs..."
-              className="w-full bg-[#121212] border border-[#303030] rounded-l-full py-2 px-4 text-white focus:outline-none focus:border-[#404040]"
+              className="w-full bg-[#121212] border border-[#303030] rounded-full py-2 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
             />
-            <button className="absolute right-0 top-0 h-full bg-[#303030] px-4 rounded-r-full flex items-center justify-center hover:bg-[#404040]">
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+            </div>
+            <button 
+              type="submit"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-primary text-white p-1 rounded-full hover:bg-red-700 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </button>
-          </div>
+          </form>
         </div>
         
         {/* Right section - Sign in button or User profile */}
@@ -148,6 +190,18 @@ const Header: React.FC<HeaderProps> = ({ isOpen, setIsOpen }) => {
         </div>
       </div>
     </header>
+  );
+};
+
+const Header: React.FC<HeaderProps> = (props) => {
+  return (
+    <Suspense fallback={
+      <header className="bg-[#212121] text-white sticky top-0 z-50 shadow-md h-16 flex items-center justify-center">
+        <div className="animate-pulse w-full max-w-md h-8 bg-gray-800 rounded"></div>
+      </header>
+    }>
+      <HeaderContent {...props} />
+    </Suspense>
   );
 };
 

@@ -9,10 +9,10 @@ interface PdfCardProps {
 
 const PdfCard: React.FC<PdfCardProps> = ({ pdf, onDelete }) => {
   return (
-    <div className="bg-[#1F1F1F] rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-red-500/30 hover:shadow-xl group">
+    <div className="bg-[#1F1F1F] rounded-lg overflow-hidden shadow-lg transition-all duration-300 hover:shadow-red-500/30 hover:shadow-xl hover:-translate-y-1 group">
       {/* PDF Icon Header */}
-      <div className="relative aspect-[2/3] w-full">
-        <div className="h-full w-full bg-[#2D2D2D] flex items-center justify-center">
+      <div className="relative w-full pb-[56.25%]">
+        <div className="absolute top-0 left-0 h-full w-full bg-[#2D2D2D] flex items-center justify-center" style={{aspectRatio: '16/9'}}>
           <div className="text-primary text-6xl">
             <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
               <path d="M8 16h8v2H8zm0-4h8v2H8zm6-10H6c-1.1 0-2 .9-2 2v16c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
@@ -33,8 +33,8 @@ const PdfCard: React.FC<PdfCardProps> = ({ pdf, onDelete }) => {
       <div className="p-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-white truncate group-hover:text-primary transition-colors duration-300" title={pdf.name}>
-              {pdf.name}
+            <h3 className="text-lg font-semibold text-white truncate group-hover:text-primary transition-colors duration-300" title={pdf.name || pdf.title}>
+              {pdf.name || pdf.title}
             </h3>
             <p className="text-gray-400 text-sm mb-2">{pdf.description || 'No description available'}</p>
           </div>

@@ -3,82 +3,183 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { usePathname } from 'next/navigation';
+import { FaHome, FaHeart, FaBookmark, FaUpload, FaBook, FaFileAlt, FaUser, FaCog, FaSignOutAlt } from 'react-icons/fa';
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, logout } = useAuth();
+  const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  
+  const toggleCollapse = () => {
+    setCollapsed(!collapsed);
+  };
+  
+  const isActive = (path: string) => {
+    return pathname === path;
+  };
+  
   return (
-    <aside className={`bg-[#212121] text-white w-64 fixed left-0 top-16 bottom-0 overflow-y-auto transition-transform duration-300 z-40 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+    <>
+      <aside className={`bg-gradient-to-b from-[#1A1A1A] to-[#212121] text-white ${collapsed ? 'w-20' : 'w-64'} fixed left-0 top-16 bottom-0 overflow-y-auto z-40 shadow-xl border-r border-gray-800 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} transition-all duration-300`} style={{height: 'calc(100vh - 4rem)'}}>
+
       <div className="flex flex-col h-full">
+        {/* Toggle button - positioned at the top of sidebar */}
+        <div className="flex justify-end py-3 px-4 border-b border-gray-800/50">
+          <button 
+            onClick={toggleCollapse} 
+            className="p-2 rounded-lg bg-gray-800/70 hover:bg-primary/20 text-gray-400 hover:text-primary transition-all duration-300"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            )}
+          </button>
+        </div>
+        
         {/* Main navigation */}
-        <nav className="py-4 px-4">
-          <ul className="space-y-2">
+        <nav className="py-4 px-3">
+          <div className={`${!collapsed ? 'mb-3 px-2' : 'mb-3 text-center'}`}>
+            {!collapsed ? (
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Navigation</h3>
+            ) : (
+              <div className="h-1 w-6 mx-auto bg-gray-700/50 rounded-full"></div>
+            )}
+          </div>
+          <ul className="space-y-1">
             <li>
-              <Link href="/" className="flex items-center py-2 px-4 rounded-lg hover:bg-[#303030] transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                <span>Home</span>
+              <Link 
+                href="/" 
+                className={`flex items-center py-3 px-4 rounded-lg transition-all duration-300 group ${isActive('/') 
+                  ? 'bg-primary/10 text-primary font-medium' 
+                  : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'}`}
+              >
+                <div className={`${isActive('/') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-2 rounded-lg mr-3 transition-all duration-300 flex items-center justify-center w-8 h-8`}>
+                  <FaHome className="h-4 w-4" />
+                </div>
+                {!collapsed && (
+                  <div className="flex flex-col">
+                    <span>Home</span>
+                    {isActive('/') && <span className="text-xs text-primary-light">Dashboard</span>}
+                  </div>
+                )}
+                {isActive('/') && <div className="ml-auto w-1.5 h-8 bg-primary rounded-full"></div>}
               </Link>
             </li>
             <li>
-              <Link href="/liked" className="flex items-center py-2 px-4 rounded-lg hover:bg-[#303030] transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                <span>Liked</span>
+              <Link 
+                href="/liked" 
+                className={`flex items-center py-3 px-4 rounded-lg transition-all duration-300 group ${isActive('/liked') 
+                  ? 'bg-primary/10 text-primary font-medium' 
+                  : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'}`}
+              >
+                <div className={`${isActive('/liked') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-2 rounded-lg mr-3 transition-all duration-300 flex items-center justify-center w-8 h-8`}>
+                  <FaHeart className="h-4 w-4" />
+                </div>
+                {!collapsed && (
+                  <div className="flex flex-col">
+                    <span>Liked</span>
+                    {isActive('/liked') && <span className="text-xs text-primary-light">Favorite content</span>}
+                  </div>
+                )}
+                {isActive('/liked') && <div className="ml-auto w-1.5 h-8 bg-primary rounded-full"></div>}
               </Link>
             </li>
             <li>
-              <Link href="/saved" className="flex items-center py-2 px-4 rounded-lg hover:bg-[#303030] transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-                <span>Saved</span>
+              <Link 
+                href="/saved" 
+                className={`flex items-center py-3 px-4 rounded-lg transition-all duration-300 group ${isActive('/saved') 
+                  ? 'bg-primary/10 text-primary font-medium' 
+                  : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'}`}
+              >
+                <div className={`${isActive('/saved') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-2 rounded-lg mr-3 transition-all duration-300 flex items-center justify-center w-8 h-8`}>
+                  <FaBookmark className="h-4 w-4" />
+                </div>
+                {!collapsed && (
+                  <div className="flex flex-col">
+                    <span>Saved</span>
+                    {isActive('/saved') && <span className="text-xs text-primary-light">Bookmarked items</span>}
+                  </div>
+                )}
+                {isActive('/saved') && <div className="ml-auto w-1.5 h-8 bg-primary rounded-full"></div>}
               </Link>
             </li>
             <li>
-              <Link href="/orders" className="flex items-center py-2 px-4 rounded-lg hover:bg-[#303030] transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-                <span>Orders</span>
-              </Link>
-            </li>
-            
-            {/* Admin link - visible to all users */}
-            <li>
-              <Link href="/admin/auth" className="flex items-center py-2 px-4 rounded-lg hover:bg-[#303030] transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span>Admin</span>
+              <Link 
+                href="/upload" 
+                className={`flex items-center py-3 px-4 rounded-lg transition-all duration-300 group ${isActive('/upload') 
+                  ? 'bg-primary/10 text-primary font-medium' 
+                  : 'text-gray-300 hover:bg-gray-800/60 hover:text-white'}`}
+              >
+                <div className={`${isActive('/upload') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-2 rounded-lg mr-3 transition-all duration-300 flex items-center justify-center w-8 h-8`}>
+                  <FaUpload className="h-4 w-4" />
+                </div>
+                {!collapsed && (
+                  <div className="flex flex-col">
+                    <span>Upload</span>
+                    {isActive('/upload') && <span className="text-xs text-primary-light">Share your content</span>}
+                  </div>
+                )}
+                {isActive('/upload') && <div className="ml-auto w-1.5 h-8 bg-primary rounded-full"></div>}
               </Link>
             </li>
           </ul>
+          
+          
         </nav>
-        
-        {/* Divider */}
-        <div className="border-t border-[#303030] my-2"></div>
         
         {/* Spacer to push footer to bottom */}
         <div className="flex-grow"></div>
         
-        {/* Footer */}
-        <div className="mt-auto border-t border-[#303030] py-4 px-6">
-          <div className="text-sm text-gray-400">
-            <h3 className="font-bold text-primary mb-1">TuneTalez</h3>
-            <p className="text-xs mb-2">Write books and upload PDF files with ease</p>
-            <p>&copy; {new Date().getFullYear()} TuneTalez</p>
-            <p className="text-xs">All rights reserved.</p>
-          </div>
+        {/* Footer - simplified */}
+        <div className="mt-auto border-t border-gray-800/50 py-4 px-4">
+          {!collapsed ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center">
+                  <span className="text-primary font-bold text-xs">TT</span>
+                </div>
+                <span className="text-sm text-gray-400 ml-2">TuneTalez</span>
+              </div>
+              <span className="text-xs text-gray-500">&copy; {new Date().getFullYear()}</span>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center">
+                <span className="text-primary font-bold text-xs">TT</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </aside>
+      </aside>
+      
+      {/* Overlay for mobile sidebar */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden backdrop-blur-sm" 
+          onClick={() => setCollapsed(false)}
+          aria-label="Close menu"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Enter') {
+              setCollapsed(false);
+            }
+          }}
+        />
+      )}
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { db } from '@/firebase/config';
 import { collection, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { BookDocument, PdfDocument, deleteBook, deletePdf } from '@/firebase/services';
@@ -9,6 +10,7 @@ import AdminBookForm from './AdminBookForm';
 import Link from 'next/link';
 
 export default function ContentManagement() {
+  const router = useRouter();
   const [books, setBooks] = useState<BookDocument[]>([]);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,8 +61,8 @@ export default function ContentManagement() {
   };
   
   const handleEditBook = (book: BookDocument) => {
-    setEditingBook(book);
-    setShowBookForm(true);
+    // Navigate to the dedicated edit page for this book
+    router.push(`/admin/edit/${book.id}`);
   };
   
   const handleBookFormSuccess = () => {
@@ -86,7 +88,7 @@ export default function ContentManagement() {
   };
 
   const handleDeletePdf = async (pdf: PdfDocument) => {
-    if (window.confirm(`Are you sure you want to delete the PDF "${pdf.name}"?`)) {
+    if (window.confirm(`Are you sure you want to delete the PDF "${pdf.name || pdf.title}"?`)) {
       try {
         await deletePdf(pdf);
         setPdfs(prevPdfs => prevPdfs.filter(p => p.id !== pdf.id));
@@ -102,7 +104,7 @@ export default function ContentManagement() {
   );
 
   const filteredPdfs = pdfs.filter(pdf => 
-    pdf.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (pdf.name || pdf.title).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -262,7 +264,7 @@ export default function ContentManagement() {
                               <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
                                 <span className="text-gray-500 dark:text-gray-300 text-sm">📄</span>
                               </div>
-                              <div className="font-medium">{pdf.name}</div>
+                              <div className="font-medium">{pdf.name || pdf.title}</div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

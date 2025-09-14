@@ -30,7 +30,7 @@ export default function AdminProtectedRoute({ children }: AdminProtectedRoutePro
     if (!loading) {
       verifyAdmin();
     }
-  }, [loading, checkAdminStatus, router]);
+  }, [loading, router]);
 
   if (loading || isVerifying) {
     return (

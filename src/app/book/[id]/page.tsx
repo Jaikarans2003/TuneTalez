@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getBookById, BookDocument, Chapter } from '@/firebase/services';
 import Link from 'next/link';
+import Header from '@/components/layout/Header';
+import LandingSidebar from '@/components/layout/LandingSidebar';
 import { useAuth } from '@/context/AuthContext';
 
 export default function ViewBookPage() {
@@ -14,6 +16,7 @@ export default function ViewBookPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedChapterIndex, setSelectedChapterIndex] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const fetchBookData = async () => {

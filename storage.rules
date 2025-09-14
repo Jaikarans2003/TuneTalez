@@ -1,39 +1,20 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // DEVELOPMENT MODE: Allow all read and write operations
-    // WARNING: These rules are insecure and should only be used during development
-    // Make sure to implement proper security rules before deploying to production
-    match /{allPaths=**} {
-      allow read, write: if true;
+    match /books/thumbnails/{allPaths=**} {
+      allow read: if true; // Allow public read
+      allow write: if request.auth != null; // Or your preferred write rule
     }
     
-    // Production rules (commented out for development)
-    // Uncomment these and remove the development rules above when deploying to production
-    /*
-    // Function to check if user is author
-    function isAuthor() {
-      return request.auth != null && 
-             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) && 
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'author';
-    }
-    
-    // Function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) && 
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Specific rules for books and pdfs
+    match /books/thumbnails/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
     }
     
     match /pdfs/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthor() || isAdmin();
+      allow write: if true;
     }
-    
-    match /books/thumbnails/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAuthor() || isAdmin();
-    }
-    */
   }
 }

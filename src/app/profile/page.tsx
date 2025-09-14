@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -53,6 +53,14 @@ export default function ProfilePage() {
   }
 
   return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="p-8 bg-[#1F1F1F] rounded-lg shadow-lg max-w-md w-full text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-white">Loading profile...</p>
+        </div>
+      </div>
+    }>
     <div className="max-w-4xl mx-auto py-8 px-4">
       <div className="bg-[#1F1F1F] rounded-lg shadow-lg overflow-hidden">
         {/* Header section with user info */}
@@ -122,5 +130,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+    </Suspense>
   );
 }

@@ -92,6 +92,9 @@ export default function ReadBookPage() {
             alt={book.title}
             fill
             className="object-cover"
+            quality={100}
+            unoptimized={true}
+            priority={true}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end">
             <div className="p-6 text-white w-full">
@@ -123,9 +126,9 @@ export default function ReadBookPage() {
           <div 
             className="prose prose-lg max-w-none prose-invert prose-headings:text-orange prose-a:text-primary-light"
             dangerouslySetInnerHTML={{ 
-              __html: book.content.includes('<') && book.content.includes('>') 
+              __html: book.content && book.content.includes('<') && book.content.includes('>') 
                 ? book.content 
-                : book.content.replace(/\n/g, '<br>') 
+                : book.content ? book.content.replace(/\n/g, '<br>') : ''
             }} 
           />
         </div>

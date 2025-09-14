@@ -8,6 +8,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import Placeholder from '@tiptap/extension-placeholder';
 import ChaptersManager from './ChaptersManager';
+import { generateImageFromPrompt, generateConciseSummary, dataUrlToFile } from '@/services/gemini';
 
 interface BookFormProps {
   onSuccess?: () => void;
@@ -22,6 +23,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
   return (
     <div className="border-b border-gray-600 p-1 flex flex-wrap gap-1 bg-[#333333]">
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         className={`p-1 rounded ${editor.isActive('heading', { level: 1 }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Heading 1"
@@ -29,6 +31,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         H1
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         className={`p-1 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Heading 2"
@@ -36,6 +39,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         H2
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().setParagraph().run()}
         className={`p-1 rounded ${editor.isActive('paragraph') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Paragraph"
@@ -44,6 +48,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       </button>
       <span className="mx-1 text-gray-500">|</span>
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleBold().run()}
         className={`p-1 rounded ${editor.isActive('bold') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Bold"
@@ -51,6 +56,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         <strong>B</strong>
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleItalic().run()}
         className={`p-1 rounded ${editor.isActive('italic') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Italic"
@@ -58,6 +64,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         <em>I</em>
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleUnderline().run()}
         className={`p-1 rounded ${editor.isActive('underline') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Underline"
@@ -66,6 +73,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       </button>
       <span className="mx-1 text-gray-500">|</span>
       <button
+        type="button"
         onClick={() => editor.chain().focus().setTextAlign('left').run()}
         className={`p-1 rounded ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Align left"
@@ -73,6 +81,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         ←
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().setTextAlign('center').run()}
         className={`p-1 rounded ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Align center"
@@ -80,6 +89,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         ↔
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().setTextAlign('right').run()}
         className={`p-1 rounded ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Align right"
@@ -88,6 +98,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       </button>
       <span className="mx-1 text-gray-500">|</span>
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
         className={`p-1 rounded ${editor.isActive('bulletList') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Bullet list"
@@ -95,6 +106,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
         • List
       </button>
       <button
+        type="button"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
         className={`p-1 rounded ${editor.isActive('orderedList') ? 'bg-gray-700' : 'bg-[#444444] hover:bg-gray-600'}`}
         title="Numbered list"
@@ -103,6 +115,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       </button>
       <span className="mx-1 text-gray-500">|</span>
       <button
+        type="button"
         onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
         className="p-1 rounded bg-[#444444] hover:bg-gray-600"
         title="Clear formatting"
@@ -118,13 +131,17 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
   const [titleError, setTitleError] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [contentError, setContentError] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [descriptionError, setDescriptionError] = useState<string>('');
+  const [conciseSummary, setConciseSummary] = useState<string>('');
+  const [generatingSummary, setGeneratingSummary] = useState(false);
   const [editorLoaded, setEditorLoaded] = useState(false);
   const [author, setAuthor] = useState('');
   const [authorError, setAuthorError] = useState<string>('');
   const [tagsInput, setTagsInput] = useState('');
   const [tagsError, setTagsError] = useState<string>('');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);  
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +176,63 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
         setThumbnailPreview(event.target?.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+  
+  // Generate concise summary with AI
+  const handleGenerateConciseSummary = async () => {
+    if (!description.trim()) {
+      setDescriptionError('Description is required to generate a concise summary');
+      setError('Please enter a book description first');
+      return;
+    }
+    
+    try {
+      setGeneratingSummary(true);
+      setError(null);
+      
+      // Generate concise summary using Gemini API
+      const summary = await generateConciseSummary(description);
+      
+      // Set the concise summary
+      setConciseSummary(summary);
+      
+    } catch (err: any) {
+      console.error('Error generating concise summary:', err);
+      setError(`Failed to generate summary: ${err.message || 'Please try again.'}`);
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+  
+  // Generate thumbnail with AI
+  const [generatingImage, setGeneratingImage] = useState(false);
+  
+  const handleGenerateAIThumbnail = async () => {
+    if (!conciseSummary.trim()) {
+      setError('Please generate a concise summary first');
+      return;
+    }
+    
+    try {
+      setGeneratingImage(true);
+      setError(null);
+      
+      // Generate image using Gemini API with the concise summary as prompt
+      const imageDataUrl = await generateImageFromPrompt(conciseSummary);
+      
+      // Convert data URL to File object
+      const file = dataUrlToFile(imageDataUrl, `ai-generated-${Date.now()}.png`);
+      
+      // Set as thumbnail
+      setThumbnail(file);
+      setThumbnailPreview(imageDataUrl);
+      
+    } catch (err: any) {
+      console.error('Error generating AI image:', err);
+      setError(`Failed to generate image: ${err.message || 'Please try again.'}`);
+    } finally {
+      setGeneratingImage(false);
     }
   };
 
@@ -259,6 +333,14 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       setAuthorError('');
     }
     
+    if (!description.trim()) {
+      setDescriptionError('Book description is required');
+      setError('Please enter a book description/summary');
+      return;
+    } else {
+      setDescriptionError('');
+    }
+    
     if (publishMode === 'single' && !content.trim()) {
       setContentError('Content is required');
       setError('Please enter book content');
@@ -330,6 +412,7 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       const result = await createBook({
         title: title.trim(),
         content: publishMode === 'single' ? content.trim() : '', // Only use content for single mode
+        description: description.trim(), // Book summary/description
         author: author.trim(),
         tags,
         thumbnailUrl,
@@ -341,6 +424,7 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
       // Reset form
       setTitle('');
       setContent('');
+      setDescription('');
       setAuthor('');
       setTagsInput('');
       setThumbnail(null);
@@ -408,6 +492,58 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
           {authorError && <p className="text-red-500 text-sm mt-1">{authorError}</p>}
         </div>
         
+        {/* Description */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+              Book Description/Summary *
+            </label>
+            <button
+              type="button"
+              onClick={handleGenerateConciseSummary}
+              className="px-3 py-1 text-sm bg-[#5A3E85] text-white rounded hover:bg-[#6E4A9E] transition-colors disabled:bg-[#3E2A5C]"
+              disabled={uploading || generatingSummary || !description.trim()}
+              title={!description.trim() ? "Enter a description first" : "Generate a concise summary for AI image generation"}
+            >
+              {generatingSummary ? (
+                <>
+                  <span className="inline-block animate-spin mr-1">⟳</span>
+                  Summarizing...
+                </>
+              ) : (
+                <>Concise Summary</>
+              )}
+            </button>
+          </div>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              // Clear concise summary when description changes
+              if (conciseSummary) {
+                setConciseSummary('');
+              }
+            }}
+            className="w-full px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-[#2a2a2a] text-white"
+            placeholder="Enter a summary or description of your book"
+            rows={4}
+            disabled={uploading || generatingSummary}
+            required
+          />
+          {descriptionError && <p className="text-red-500 text-sm mt-1">{descriptionError}</p>}
+          
+          {/* Concise Summary Display */}
+          {conciseSummary && (
+            <div className="mt-2 p-3 bg-[#2a2a2a] border border-[#5A3E85] rounded-md">
+              <div className="flex justify-between items-start mb-1">
+                <span className="text-sm font-medium text-[#9D7BC5]">Concise Summary (for AI generation):</span>
+              </div>
+              <p className="text-sm text-white">{conciseSummary}</p>
+            </div>
+          )}
+        </div>
+        
         {/* Tags */}
         <div className="mb-4">
           <label htmlFor="tags" className="block text-sm font-medium text-gray-300 mb-1">
@@ -431,14 +567,30 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
           <label className="block text-sm font-medium text-gray-300 mb-1">
             Book Thumbnail *
           </label>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-4">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 bg-[#333333] text-white rounded hover:bg-[#444444] transition-colors disabled:bg-[#222222]"
-              disabled={uploading}
+              disabled={uploading || generatingImage}
             >
               Select Image
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateAIThumbnail}
+              className="px-4 py-2 bg-[#5A3E85] text-white rounded hover:bg-[#6E4A9E] transition-colors disabled:bg-[#3E2A5C]"
+              disabled={uploading || generatingImage || !conciseSummary.trim()}
+              title={!conciseSummary.trim() ? "Generate a concise summary first" : "Generate thumbnail using AI"}
+            >
+              {generatingImage ? (
+                <>
+                  <span className="inline-block animate-spin mr-2">⟳</span>
+                  Generating...
+                </>
+              ) : (
+                <>Generate with AI</>
+              )}
             </button>
             <input
               type="file"
@@ -446,21 +598,27 @@ const BookForm = ({ onSuccess }: BookFormProps) => {
               onChange={handleThumbnailChange}
               className="hidden"
               accept="image/*"
-              disabled={uploading}
+              disabled={uploading || generatingImage}
             />
             <span className="text-sm text-gray-400">
-              {thumbnail ? thumbnail.name : 'No file selected'}
+              {thumbnail ? (
+                thumbnail.name.startsWith('ai-generated') 
+                  ? 'AI-generated image' 
+                  : thumbnail.name
+              ) : 'No file selected'}
             </span>
           </div>
           
           {/* Thumbnail Preview */}
           {thumbnailPreview && (
-            <div className="mt-2">
-              <img 
-                src={thumbnailPreview} 
-                alt="Thumbnail preview" 
-                className="h-40 object-cover rounded border border-gray-300" 
-              />
+            <div className="mt-4 flex justify-center">
+              <div className="relative aspect-[9/16] h-60 border border-gray-300 rounded overflow-hidden">
+                <img 
+                  src={thumbnailPreview} 
+                  alt="Thumbnail preview" 
+                  className="absolute inset-0 w-full h-full object-cover" 
+                />
+              </div>
             </div>
           )}
         </div>
