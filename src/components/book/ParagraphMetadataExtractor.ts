@@ -5,7 +5,7 @@
 import { ContentMetadata } from '@/services/openai';
 
 // OpenAI API key
-const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
+const OPENAI_API_KEY = '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';
 const TEXT_MODEL = 'gpt-3.5-turbo';
 
 /**
