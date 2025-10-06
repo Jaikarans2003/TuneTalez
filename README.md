@@ -1,14 +1,5 @@
-# TuneTalez - PDF Viewer Application
+# TuneTalez
 
-A web application that allows users to upload, view, and manage PDF files with a red and black color palette.
-
-## Features
-
-- Upload PDF files to Firebase Storage
-- View list of uploaded PDFs
-- View PDF files with pagination and zoom controls
-- Delete PDF files
-- Responsive design with red and black color palette
 
 ## Tech Stack
 
@@ -16,7 +7,7 @@ A web application that allows users to upload, view, and manage PDF files with a
 - TypeScript
 - Tailwind CSS
 - Firebase (Storage, Firestore, Hosting)
-- React PDF Viewer
+
 
 ## Getting Started
 
