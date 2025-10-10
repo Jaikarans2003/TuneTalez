@@ -82,8 +82,17 @@ const EpisodeNarrationGenerator = ({
             // Use paragraph-level analysis for multiple background tracks
             console.log('Using paragraph-level analysis for background music...');
             
-            // Split content into paragraphs
-            const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+            // Split content into paragraphs using $ as primary delimiter
+            const paragraphs = text.split(/\$/).filter(p => p.trim().length > 0);
+            
+            // Fallback to double line breaks if no paragraphs found with $
+            if (paragraphs.length <= 1 && text.length > 500) {
+              console.log('Falling back to double line breaks for paragraph splitting');
+              const fallbackParagraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+              if (fallbackParagraphs.length > 1) {
+                paragraphs.splice(0, paragraphs.length, ...fallbackParagraphs);
+              }
+            }
             
             try {
               // Get random background music for each paragraph

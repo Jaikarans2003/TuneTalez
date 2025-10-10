@@ -8,6 +8,9 @@ import Header from '@/components/layout/Header';
 import LandingSidebar from '@/components/layout/LandingSidebar';
 import { useAuth } from '@/context/AuthContext';
 import AudioPlayer from '@/components/audio/AudioPlayer';
+import TextMagnifier from '@/components/ui/TextMagnifier';
+import LikeButton from '@/components/book/LikeButton';
+import SaveButton from '@/components/book/SaveButton';
 import { debugAudioUrl, traceAudioUrl } from '@/utils/audioDebugger';
 import { ensureFirebaseHttpsUrl } from '@/utils/audioUtils';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -393,11 +396,24 @@ export default function ViewBookPage() {
           {/* Main content area */}
           <div className="md:col-span-9">
             <div className="bg-[#1F1F1F] rounded-lg shadow-md p-6">
-              {selectedChapter ? (
-                <>
-                  <h2 className="text-2xl font-bold text-white mb-4">
+              <div className="flex justify-between items-center mb-4">
+                {selectedChapter ? (
+                  <h2 className="text-2xl font-bold text-white">
                     {selectedChapter.title}
                   </h2>
+                ) : (
+                  <h2 className="text-2xl font-bold text-white">
+                    {book.title}
+                  </h2>
+                )}
+                <div className="flex items-center space-x-3">
+                  <TextMagnifier />
+                  <LikeButton bookId={params.id as string} className="text-white hover:text-red-500" />
+                  <SaveButton bookId={params.id as string} className="text-white hover:text-primary" />
+                </div>
+              </div>
+              {selectedChapter ? (
+                <>
                   
                   {/* Audio Player for Chapter */}
                   {(selectedChapter.audioUrl || currentAudioUrl === selectedChapter.audioUrl) && (

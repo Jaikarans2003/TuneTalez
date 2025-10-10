@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
-import { FaHome, FaHeart, FaBookmark, FaBars, FaTimes } from 'react-icons/fa';
+import { FaHome, FaHeart, FaBookmark, FaBars, FaTimes, FaBook, FaRocket } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
+import { IoSchool } from 'react-icons/io5';
 import Logo from './Logo';
 
 interface LandingSidebarProps {
@@ -90,6 +91,41 @@ const LandingSidebar: React.FC<LandingSidebarProps> = ({ isOpen = true }) => {
                 </Link>
               </li>
               
+              <li>
+                <Link 
+                  href="/academics" 
+                  className="flex flex-col items-center justify-center transition-all duration-300 group"
+                >
+                  <div className={`${isActive('/academics') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-3 rounded-lg transition-all duration-300 flex items-center justify-center w-12 h-12`}>
+                    <IoSchool className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs mt-1 text-gray-400 group-hover:text-white">Academics</span>
+                </Link>
+              </li>
+              
+              <li>
+                <Link 
+                  href="/romance" 
+                  className="flex flex-col items-center justify-center transition-all duration-300 group"
+                >
+                  <div className={`${isActive('/romance') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-3 rounded-lg transition-all duration-300 flex items-center justify-center w-12 h-12`}>
+                    <FaHeart className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs mt-1 text-gray-400 group-hover:text-white">Romance</span>
+                </Link>
+              </li>
+              
+              <li>
+                <Link 
+                  href="/sci-fi" 
+                  className="flex flex-col items-center justify-center transition-all duration-300 group"
+                >
+                  <div className={`${isActive('/sci-fi') ? 'bg-primary/20 text-primary' : 'bg-gray-800/50 text-gray-400 group-hover:bg-gray-700/70 group-hover:text-gray-200'} p-3 rounded-lg transition-all duration-300 flex items-center justify-center w-12 h-12`}>
+                    <FaRocket className="h-5 w-5" />
+                  </div>
+                  <span className="text-xs mt-1 text-gray-400 group-hover:text-white">Sci-Fi</span>
+                </Link>
+              </li>
               
             </ul>
           </nav>

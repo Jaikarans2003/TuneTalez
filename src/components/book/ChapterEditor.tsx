@@ -11,6 +11,7 @@ import AudioNarrationButton from './AudioNarrationButton';
 import EnhancedAudioNarrationButton from './EnhancedAudioNarrationButton';
 import { traceAudioUrl } from '@/utils/audioDebugger';
 import { rewriteAsStory } from '@/services/gemini';
+import NewEpisodeNarrationGenerator from './NewEpisodeNarrationGenerator';
 
 interface ChapterEditorProps {
   chapter: Partial<Chapter>;
@@ -256,34 +257,51 @@ const ChapterEditor = ({
           {isNew ? 'New Episode' : `Episode: ${title || 'Untitled'}`}
         </h3>
         <div className="flex items-center gap-2">
-          {chapter.id && content && (
-            useEnhancedNarration ? (
-              <EnhancedAudioNarrationButton
-                text={content.replace(/<[^>]*>/g, ' ')} // Strip HTML tags for narration
-                bookId={chapter.bookId as string}
-                chapterId={chapter.id}
-                onSuccess={(audioUrl) => {
-                  // Trace the audio URL to ensure it's a Firebase Storage URL
-                  const tracedUrl = traceAudioUrl(audioUrl, 'ChapterEditor.onSuccessEnhanced');
-                  onChange({
-                    ...chapter,
-                    audioUrl: tracedUrl
-                  });
-                }}
-              />
+          {content && (
+            chapter.id ? (
+              useEnhancedNarration ? (
+                <EnhancedAudioNarrationButton
+                  text={content.replace(/<[^>]*>/g, ' ')} // Strip HTML tags for narration
+                  bookId={chapter.bookId as string}
+                  chapterId={chapter.id}
+                  onSuccess={(audioUrl) => {
+                    // Trace the audio URL to ensure it's a Firebase Storage URL
+                    const tracedUrl = traceAudioUrl(audioUrl, 'ChapterEditor.onSuccessEnhanced');
+                    onChange({
+                      ...chapter,
+                      audioUrl: tracedUrl
+                    });
+                  }}
+                />
+              ) : (
+                <AudioNarrationButton 
+                  text={content.replace(/<[^>]*>/g, ' ')} // Strip HTML tags for narration
+                  bookId={chapter.bookId as string}
+                  chapterId={chapter.id}
+                  onSuccess={(audioUrl) => {
+                    // Trace the audio URL to ensure it's a Firebase Storage URL
+                    const tracedUrl = traceAudioUrl(audioUrl, 'ChapterEditor.onSuccess');
+                    onChange({
+                      ...chapter,
+                      audioUrl: tracedUrl
+                    });
+                  }}
+                />
+              )
             ) : (
-              <AudioNarrationButton 
+              // For new episodes that don't have an ID yet
+              <NewEpisodeNarrationGenerator
+                bookId={chapter.bookId || ''}
                 text={content.replace(/<[^>]*>/g, ' ')} // Strip HTML tags for narration
-                bookId={chapter.bookId as string}
-                chapterId={chapter.id}
                 onSuccess={(audioUrl) => {
                   // Trace the audio URL to ensure it's a Firebase Storage URL
-                  const tracedUrl = traceAudioUrl(audioUrl, 'ChapterEditor.onSuccess');
+                  const tracedUrl = traceAudioUrl(audioUrl, 'ChapterEditor.onSuccessNewEpisode');
                   onChange({
                     ...chapter,
                     audioUrl: tracedUrl
                   });
                 }}
+                className="text-sm"
               />
             )
           )}

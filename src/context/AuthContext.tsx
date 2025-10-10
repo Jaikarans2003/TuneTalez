@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from 'firebase/auth';
 import { onAuthStateChange, signOut } from '@/firebase/auth';
-import { UserProfile, createUserProfile, getUserProfile, updateUserRole } from '@/firebase/services';
+import { UserProfile, createUserProfile, getUserProfile, updateUserRole, updateUserProfile } from '@/firebase/services';
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   updateRole: (role: 'reader' | 'author' | 'admin') => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   logout: async () => {},
   updateRole: async () => {},
+  updateProfile: async () => {},
   isAdmin: false,
 });
 
@@ -97,10 +99,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (user) {
+      const updatedProfile = await updateUserProfile(user.uid, updates);
+      setProfile(updatedProfile);
+    }
+  };
+
 
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, logout, updateRole, isAdmin }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      logout, 
+      updateRole,
+      updateProfile,
+      isAdmin 
+    }}>
       {children}
     </AuthContext.Provider>
   );

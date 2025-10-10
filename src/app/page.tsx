@@ -18,7 +18,7 @@ function HomeContent() {
   const [error, setError] = useState<string | null>(null);
   
   // Get search query from URL
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); 
   
   useEffect(() => {
     const q = searchParams.get('q');
@@ -154,15 +154,20 @@ function HomeContent() {
               <button 
                 className="bg-gradient-to-r from-primary to-primary-dark text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-primary/30 hover:scale-105 transform"
                 suppressHydrationWarning
+                onClick={() => {
+                  document.getElementById('featured-collection')?.scrollIntoView({ behavior: 'smooth' });
+                }}
               >
                 Explore Content
               </button>
-              <button 
-                className="bg-transparent border-2 border-white/30 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 hover:bg-white/10 hover:border-white/50"
-                suppressHydrationWarning
-              >
-                Join for Beta
-              </button>
+              <Link href="/beta-signup">
+                <button 
+                  className="bg-transparent border-2 border-white/30 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 hover:bg-white/10 hover:border-white/50"
+                  suppressHydrationWarning
+                >
+                  Join for Beta
+                </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -186,8 +191,8 @@ function HomeContent() {
           </div>
         ) : (
           <>
-            {/* Books Section */}
-            <section className="mb-16 py-16">
+            {/* Featured Collection - Recently Added Books */}
+            <section id="featured-collection" className="mb-16 py-16">
               <div className="flex flex-col md:flex-row justify-between items-center mb-12 animate-fade-in">
                 <div className="mb-6 md:mb-0 animate-slide-up">
                   <div className="flex items-center mb-2">
@@ -195,7 +200,7 @@ function HomeContent() {
                     <span className="text-primary-light uppercase tracking-wider text-sm font-semibold">Featured Collection</span>
                   </div>
                   <h2 className="text-4xl font-bold text-white flex items-center">
-                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Explore Our Content</span>
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Explore Collection</span>
                   </h2>
                 </div>
                 <div className="flex space-x-3 animate-fade-in stagger-2">
@@ -249,13 +254,197 @@ function HomeContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4">
-                  {filteredBooks.map((book, index) => (
-                    <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
-                      <BookCard book={book} onDelete={handleDeleteBook} />
-                    </div>
-                  ))}
+                  {/* Sort books by createdAt date and take the first 5-10 */}
+                  {filteredBooks
+                    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                    .slice(0, 10)
+                    .map((book, index) => (
+                      <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
+                        <BookCard book={book} />
+                      </div>
+                    ))}
                 </div>
               )}
+            </section>
+            
+            {/* History Collection */}
+            <section className="mb-16 py-16">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-12 animate-fade-in">
+                <div className="mb-6 md:mb-0 animate-slide-up">
+                  <div className="flex items-center mb-2">
+                    <div className="w-10 h-1 bg-gradient-to-r from-primary to-orange rounded mr-3"></div>
+                    <span className="text-primary-light uppercase tracking-wider text-sm font-semibold">History Collection</span>
+                  </div>
+                  {/* <h2 className="text-4xl font-bold text-white flex items-center">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Historical Books</span>
+                  </h2> */}
+                </div>
+                <div className="flex space-x-3 animate-fade-in stagger-2">
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4">
+                {filteredBooks
+                  .filter(book => book.tags && book.tags.some(tag => tag.toLowerCase() === 'history'))
+                  .slice(0, 10)
+                  .map((book, index) => (
+                    <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
+                      <BookCard book={book} />
+                    </div>
+                  ))}
+              </div>
+            </section>
+            
+            {/* Academics Collection */}
+            <section className="mb-16 py-16">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-12 animate-fade-in">
+                <div className="mb-6 md:mb-0 animate-slide-up">
+                  <div className="flex items-center mb-2">
+                    <div className="w-10 h-1 bg-gradient-to-r from-primary to-orange rounded mr-3"></div>
+                    <span className="text-primary-light uppercase tracking-wider text-sm font-semibold">Academics</span>
+                  </div>
+                  {/* <h2 className="text-4xl font-bold text-white flex items-center">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Academic Books</span>
+                  </h2> */}
+                </div>
+                <div className="flex space-x-3 animate-fade-in stagger-2">
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4">
+                {filteredBooks
+                  .filter(book => book.tags && book.tags.some(tag => tag.toLowerCase() === 'academics' || tag.toLowerCase() === 'academic'))
+                  .slice(0, 10)
+                  .map((book, index) => (
+                    <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
+                      <BookCard book={book} />
+                    </div>
+                  ))}
+              </div>
+            </section>
+            
+            {/* Romance Collection */}
+            <section className="mb-16 py-16">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-12 animate-fade-in">
+                <div className="mb-6 md:mb-0 animate-slide-up">
+                  <div className="flex items-center mb-2">
+                    <div className="w-10 h-1 bg-gradient-to-r from-primary to-orange rounded mr-3"></div>
+                    <span className="text-primary-light uppercase tracking-wider text-sm font-semibold">Romance</span>
+                  </div>
+                  {/* <h2 className="text-4xl font-bold text-white flex items-center">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Romance Books</span>
+                  </h2> */}
+                </div>
+                <div className="flex space-x-3 animate-fade-in stagger-2">
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4">
+                {filteredBooks
+                  .filter(book => book.tags && book.tags.some(tag => tag.toLowerCase() === 'romance'))
+                  .slice(0, 10)
+                  .map((book, index) => (
+                    <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
+                      <BookCard book={book} />
+                    </div>
+                  ))}
+              </div>
+            </section>
+            
+            {/* Sci-Fi Collection */}
+            <section className="mb-16 py-16">
+              <div className="flex flex-col md:flex-row justify-between items-center mb-12 animate-fade-in">
+                <div className="mb-6 md:mb-0 animate-slide-up">
+                  <div className="flex items-center mb-2">
+                    <div className="w-10 h-1 bg-gradient-to-r from-primary to-orange rounded mr-3"></div>
+                    <span className="text-primary-light uppercase tracking-wider text-sm font-semibold">Sci-Fi</span>
+                  </div>
+                  {/* <h2 className="text-4xl font-bold text-white flex items-center">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Science Fiction</span>
+                  </h2> */}
+                </div>
+                <div className="flex space-x-3 animate-fade-in stagger-2">
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  <button 
+                    className="bg-[#2A2A2A] hover:bg-[#333] p-3 rounded-full transition-all duration-300 hover:scale-110"
+                    suppressHydrationWarning
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4">
+                {filteredBooks
+                  .filter(book => book.tags && book.tags.some(tag => 
+                    tag.toLowerCase() === 'sci-fi' || 
+                    tag.toLowerCase() === 'science fiction' || 
+                    tag.toLowerCase() === 'scifi'
+                  ))
+                  .slice(0, 10)
+                  .map((book, index) => (
+                    <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
+                      <BookCard book={book} />
+                    </div>
+                  ))}
+              </div>
             </section>
 
             {/* Testimonials Section */}

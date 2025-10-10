@@ -6,30 +6,92 @@ const TTS_MODEL = 'gpt-4o-mini-tts';
 const TEXT_MODEL = 'gpt-3.5-turbo';
 
 // Generate audio from text using OpenAI TTS API
-export const generateAudio = async (text: string): Promise<ArrayBuffer> => {
+export const generateAudio = async (text: string, pauseDuration: number = 7): Promise<ArrayBuffer> => {
   try {
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: TTS_MODEL,
-        input: text,
-        instructions: "You are a professional storyteller narrating a story for children and students. Read the following text as if you are narrating it aloud in a calm, engaging, and natural voice. Speak slowly and clearly, with natural pauses between sentences and paragraphs. Pause for atleast 3 seconds after double full stops (..). Add slight breaths and pauses where a real narrator would breathe. Include natural emphasis on important words to make the story engaging. Add subtle human-like sounds such as soft sighs or gentle coughed breaths when appropriate. Vary the intonation to make the narration expressive, not monotone. Keep the pace steady and comfortable, as if telling the story aloud in person. Avoid robotic or overly formal speech. Pause slightly after commas, and more after periods or paragraph breaks. Use storytelling style: friendly, warm, and captivating.",
-        voice: 'alloy', // Default voice, can be customized
-        style: "narration",
-        response_format: 'mp3',
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+    // Split text by $ symbol (primary paragraph delimiter)
+    const paragraphs = text.split('$').filter(p => p.trim().length > 0);
+    
+    // Track which paragraphs were split by $ symbol
+    const wasSplitByDollar = paragraphs.length > 1;
+    
+    // If no $ symbols found or only one paragraph, check for multiple line breaks as fallback
+    let finalParagraphs = paragraphs;
+    if (paragraphs.length <= 1) {
+      console.log('No $ symbols found, falling back to multiple line breaks for paragraph splitting');
+      // Look for 2 or more consecutive line breaks
+      finalParagraphs = text.split(/\n\s*\n\s*\n/).filter(p => p.trim().length > 0);
+      
+      // If we still have only one paragraph, try with just two line breaks
+      if (finalParagraphs.length <= 1) {
+        finalParagraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+      }
     }
+    
+    // If we have multiple paragraphs, process each separately and combine
+    if (finalParagraphs.length > 1) {
+      console.log(`Processing ${finalParagraphs.length} paragraphs separately`);
+      
+      // Process each paragraph individually
+      const audioBuffers: ArrayBuffer[] = [];
+      for (let i = 0; i < finalParagraphs.length; i++) {
+        console.log(`Processing paragraph ${i+1}/${finalParagraphs.length}`);
+        const paragraph = finalParagraphs[i].trim();
+        
+        if (paragraph.length === 0) continue;
+        
+        const response = await fetch('https://api.openai.com/v1/audio/speech', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: TTS_MODEL,
+            input: paragraph,
+            instructions: "You are a professional storyteller narrating a story for children and students. Read the following text as if you are narrating it aloud in a calm, engaging, and natural voice. Speak slowly and clearly, with natural pauses between sentences and paragraphs. Add slight breaths and pauses where a real narrator would breathe. Include natural emphasis on important words to make the story engaging. Add subtle human-like sounds such as soft sighs or gentle coughed breaths when appropriate. Vary the intonation to make the narration expressive, not monotone. Keep the pace steady and comfortable, as if telling the story aloud in person. Avoid robotic or overly formal speech. Pause slightly after commas, and more after periods. Use storytelling style: friendly, warm, and captivating. Pause for at least 3 seconds at the end of this paragraph.",
+            voice: 'coral', // Default voice, can be customized
+            style: "narration",
+            response_format: 'mp3',
+          }),
+        });
 
-    return await response.arrayBuffer();
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`OpenAI API error for paragraph ${i+1}: ${error.error?.message || response.statusText}`);
+        }
+
+        const buffer = await response.arrayBuffer();
+        audioBuffers.push(buffer);
+      }
+      
+      // Return only the first paragraph's audio - let AudiobookProduction handle each paragraph separately
+      return audioBuffers[0];
+    } else {
+      // Process the entire text as a single paragraph (original behavior)
+      console.log('Processing text as a single paragraph');
+      const response = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: TTS_MODEL,
+          input: text,
+          instructions: "You are a professional storyteller narrating a story for children and students. Read the following text as if you are narrating it aloud in a calm, engaging, and natural voice. Speak slowly and clearly, with natural pauses between sentences and paragraphs. Pause for atleast 3 seconds after double full stops (..). Add slight breaths and pauses where a real narrator would breathe. Include natural emphasis on important words to make the story engaging. Add subtle human-like sounds such as soft sighs or gentle coughed breaths when appropriate. Vary the intonation to make the narration expressive, not monotone. Keep the pace steady and comfortable, as if telling the story aloud in person. Avoid robotic or overly formal speech. Pause slightly after commas, and more after periods or paragraph breaks. Use storytelling style: friendly, warm, and captivating.",
+          voice: 'coral', // Default voice, can be customized
+          style: "narration",
+          response_format: 'mp3',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+      }
+
+      return await response.arrayBuffer();
+    }
   } catch (error) {
     console.error('Error generating audio:', error);
     throw error;

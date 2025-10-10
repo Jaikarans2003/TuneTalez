@@ -10,6 +10,8 @@
     "deploy": "next build && firebase deploy"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.907.0",
+    "@aws-sdk/s3-request-presigner": "^3.907.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@headlessui/react": "^2.2.7",
     "@hello-pangea/dnd": "^18.0.1",

@@ -74,14 +74,14 @@ export default function AdminStats() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF0000]"></div>
       </div>
     );
   }
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Platform Statistics</h2>
+      <h2 className="text-xl font-semibold mb-4 text-[#FF0000]">Platform Statistics</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <StatCard title="Total Users" value={stats.totalUsers} />
@@ -89,7 +89,7 @@ export default function AdminStats() {
         <StatCard title="Total PDFs" value={stats.totalPdfs} />
       </div>
       
-      <h3 className="text-lg font-medium mb-3">Last 7 Days</h3>
+      <h3 className="text-lg font-medium mb-3 text-[#FF0000]">Last 7 Days</h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard title="New Users" value={stats.recentUsers} />
         <StatCard title="New Books" value={stats.recentBooks} />
@@ -101,9 +101,9 @@ export default function AdminStats() {
 
 function StatCard({ title, value }: { title: string; value: number }) {
   return (
-    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow">
-      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
-      <p className="text-2xl font-bold mt-1">{value}</p>
+    <div className="bg-[#1F1F1F] p-4 rounded-lg shadow border border-[#333333]">
+      <h3 className="text-sm font-medium text-[#FF0000]">{title}</h3>
+      <p className="text-2xl font-bold mt-1 text-white">{value}</p>
     </div>
   );
 }

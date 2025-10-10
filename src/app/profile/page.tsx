@@ -6,10 +6,13 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 
 export default function ProfilePage() {
-  const { user, profile, logout, updateRole } = useAuth();
+  const { user, profile, logout, updateRole, updateProfile } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [bio, setBio] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -18,19 +21,13 @@ export default function ProfilePage() {
     }
   }, [user, loading, router]);
 
-  // const handleRoleChange = async (role: 'reader' | 'author') => {
-  //   try {
-  //     setLoading(true);
-  //     setMessage('');
-  //     await updateRole(role);
-  //     setMessage(`Your account has been updated to ${role} status`);
-  //   } catch (error) {
-  //     setMessage('Failed to update role. Please try again.');
-  //     console.error('Error updating role:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  // Load profile data
+  useEffect(() => {
+    if (profile) {
+      setBio(profile.bio || '');
+      setPhoneNumber(profile.phoneNumber || '');
+    }
+  }, [profile]);
 
   const handleLogout = async () => {
     try {
@@ -38,6 +35,21 @@ export default function ProfilePage() {
       router.push('/');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      setMessage('');
+      await updateProfile({ bio, phoneNumber });
+      setMessage('Profile updated successfully');
+      setIsEditing(false);
+    } catch (error) {
+      setMessage('Failed to update profile. Please try again.');
+      console.error('Error updating profile:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,30 +103,83 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* <div className="mb-8">
-            <h2 className="text-xl font-semibold text-white mb-4">Account Type</h2>
-            <p className="text-gray-400 mb-4">
-              Choose your account type based on how you want to use TuneTalez:
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={() => handleRoleChange('reader')}
-                disabled={loading || profile.role === 'reader'}
-                className={`px-4 py-3 rounded-md flex-1 ${profile.role === 'reader' ? 'bg-primary text-white' : 'bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className="font-semibold">Reader</div>
-                <div className="text-sm opacity-80 mt-1">Access and read content</div>
-              </button>
-              <button
-                onClick={() => handleRoleChange('author')}
-                disabled={loading || profile.role === 'author'}
-                className={`px-4 py-3 rounded-md flex-1 ${profile.role === 'author' ? 'bg-primary text-white' : 'bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className="font-semibold">Author</div>
-                <div className="text-sm opacity-80 mt-1">Create and publish content</div>
-              </button>
+          {/* Profile Information Section */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">Profile Information</h2>
+              {!isEditing && (
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="px-3 py-1 bg-[#3a3a3a] text-white rounded-md hover:bg-[#4a4a4a]"
+                >
+                  Edit
+                </button>
+              )}
             </div>
-          </div> */}
+            
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="bio" className="block text-sm font-medium text-gray-400 mb-1">
+                    Bio
+                  </label>
+                  <textarea
+                    id="bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell us about yourself"
+                    className="w-full px-3 py-2 bg-[#2a2a2a] text-white rounded-md border border-[#3a3a3a] focus:outline-none focus:ring-1 focus:ring-primary"
+                    rows={3}
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-400 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    id="phoneNumber"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Your phone number"
+                    className="w-full px-3 py-2 bg-[#2a2a2a] text-white rounded-md border border-[#3a3a3a] focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleSaveProfile}
+                    disabled={loading}
+                    className={`px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {loading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setBio(profile.bio || '');
+                      setPhoneNumber(profile.phoneNumber || '');
+                    }}
+                    className="px-4 py-2 bg-[#3a3a3a] text-white rounded-md hover:bg-[#4a4a4a]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Bio</h3>
+                  <p className="text-white mt-1">{profile.bio || 'No bio added yet'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-400">Phone Number</h3>
+                  <p className="text-white mt-1">{profile.phoneNumber || 'No phone number added'}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="border-t border-[#3a3a3a] pt-6 flex flex-col sm:flex-row gap-4">
             <Link href="/" className="px-4 py-2 bg-[#2a2a2a] text-white rounded-md text-center hover:bg-[#3a3a3a]">

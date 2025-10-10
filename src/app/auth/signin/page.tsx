@@ -36,7 +36,7 @@ export default function SignInPage() {
       }
       setLoading(false);
       
-      router.push('/');
+      router.push('/profile');
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
       setLoading(false);
@@ -61,7 +61,7 @@ export default function SignInPage() {
       });
       setLoading(false);
       
-      router.push('/');
+      router.push('/profile');
     } catch (err: any) {
       console.error('Google sign in error:', err);
       

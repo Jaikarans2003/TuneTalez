@@ -65,26 +65,26 @@ const EnhancedAudioNarrationButton = ({
       // First normalize line breaks to ensure consistent splitting
       const normalizedText = text.replace(/\r\n/g, '\n');
       
-      // Try multiple paragraph splitting strategies
-      let textParagraphs = normalizedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+      // Primary splitting strategy: Use $ symbol as paragraph delimiter
+      let textParagraphs = normalizedText.split(/\$/).filter(p => p.trim().length > 0);
+      console.log(`Found ${textParagraphs.length} paragraphs using $ symbol as delimiter`);
       
       // If we only found one paragraph, try alternative splitting methods
       if (textParagraphs.length <= 1 && normalizedText.length > 500) {
-        console.log("Only one paragraph found with double line break, trying alternative splitting methods");
+        console.log("Only one paragraph found with $ symbol, trying alternative splitting methods");
         
-        // Try splitting by single line breaks
-        const singleBreakParagraphs = normalizedText.split(/\n/).filter(p => p.trim().length > 0);
-        if (singleBreakParagraphs.length > 1) {
-          console.log("Found paragraphs using single line breaks");
-          textParagraphs = singleBreakParagraphs;
+        // Try splitting by double line breaks (legacy method)
+        const doubleBreakParagraphs = normalizedText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+        if (doubleBreakParagraphs.length > 1) {
+          console.log(`Found ${doubleBreakParagraphs.length} paragraphs using double line breaks`);
+          textParagraphs = doubleBreakParagraphs;
         }
         
-        // Try splitting by double periods (..) - this is the preferred method after line breaks
+        // Try splitting by double periods (..) - legacy method
         if (textParagraphs.length <= 1) {
           console.log("Trying to split by double periods (..)");
           
           // Specifically target double periods (..) followed by whitespace or end of text
-          // We're using a specific pattern to match exactly two periods
           const doublePeriodSplitText = normalizedText.replace(/\.\.(?:\s+|$)/g, "..\n\n");
           const doublePeriodParagraphs = doublePeriodSplitText.split(/\n\s*\n/).filter(p => p.trim().length > 0);
           
@@ -93,9 +93,6 @@ const EnhancedAudioNarrationButton = ({
             textParagraphs = doublePeriodParagraphs;
           }
         }
-        
-        // No longer using standard sentence endings as paragraph separators
-        // This is per user request to only use double periods (..) as paragraph separators
       }
       
       // Limit to maximum 5 paragraphs for performance
@@ -435,9 +432,13 @@ const EnhancedAudioNarrationButton = ({
   };
 
   return (
-    <div className="flex flex-col items-start w-full">
+    <div className="flex flex-col items-start w-full" onClick={(e) => e.stopPropagation()}>
       <button
-        onClick={handleButtonClick}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleButtonClick(e);
+        }}
         disabled={isGenerating || isUploading}
         className={`flex items-center px-4 py-2 bg-[#5A3E85] text-white rounded hover:bg-[#6E4A9E] transition-colors disabled:bg-[#3E2A5C] ${className}`}
         title="Generate audio narration with background music"

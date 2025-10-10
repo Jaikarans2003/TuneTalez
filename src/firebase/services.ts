@@ -27,6 +27,8 @@ export interface UserProfile {
   email: string;
   displayName?: string;
   photoURL?: string;
+  bio?: string;
+  phoneNumber?: string;
   role: 'user' | 'admin' | 'reader' | 'author';
   createdAt: number;
 }

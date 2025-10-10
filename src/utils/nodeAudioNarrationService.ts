@@ -849,9 +849,19 @@ export async function generateNarrationWithBackgroundMusic(
       }
     }
     
-    // Step 1: Split text into paragraphs using double full stops (..) as the delimiter
-    const paragraphs = text.split(/\.\./).filter(p => p.trim().length > 0);
-    console.log(`Split text into ${paragraphs.length} paragraphs using double full stops (..) as delimiter`);
+    // Step 1: Split text into paragraphs using $ as the primary delimiter
+    const paragraphs = text.split(/\$/).filter(p => p.trim().length > 0);
+    console.log(`Split text into ${paragraphs.length} paragraphs using $ symbol as delimiter`);
+    
+    // Fallback to double full stops (..) if no paragraphs found with $
+    if (paragraphs.length <= 1 && text.length > 500) {
+      console.log(`Only one paragraph found with $ symbol, trying double full stops (..) as fallback`);
+      const fallbackParagraphs = text.split(/\.\./).filter(p => p.trim().length > 0);
+      if (fallbackParagraphs.length > 1) {
+        console.log(`Found ${fallbackParagraphs.length} paragraphs using double full stops (..) as fallback`);
+        paragraphs.splice(0, paragraphs.length, ...fallbackParagraphs);
+      }
+    }
     
     // Step 2: Extract metadata for each paragraph
     const paragraphMetadata = await extractParagraphMetadata(paragraphs);

@@ -54,8 +54,17 @@ const AudiobookProduction = ({
       setError(null);
       setCurrentStep('segmenting-text');
 
-      // Step 1: Split text into coherent segments (paragraphs)
-      const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+      // Step 1: Split text into coherent segments (paragraphs) using $ as primary delimiter
+      const paragraphs = text.split(/\$/).filter(p => p.trim().length > 0);
+      
+      // Fallback to double line breaks if no paragraphs found with $
+      if (paragraphs.length <= 1 && text.length > 500) {
+        console.log('Falling back to double line breaks for paragraph splitting');
+        const fallbackParagraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+        if (fallbackParagraphs.length > 1) {
+          paragraphs.splice(0, paragraphs.length, ...fallbackParagraphs);
+        }
+      }
       console.log(`Identified ${paragraphs.length} paragraphs for processing`);
       
       // Step 2: Determine mood for each paragraph using OpenAI
@@ -79,153 +88,171 @@ const AudiobookProduction = ({
       
       setSegments(segmentsWithMetadata);
       
-      // Step 3: Process each paragraph separately
+      // Step 3: Process each paragraph sequentially and build final audio buffer
       setCurrentStep('processing-segments');
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Create an offline context for the final audio
+      // We'll calculate the total duration as we go and resize if needed
+      let estimatedTotalDuration = 0;
+      const pauseDuration = 7; // Exactly 7-second pause between paragraphs
+      
+      // Create a new offline context with initial size (we'll render in chunks)
+      let offlineContext = new OfflineAudioContext({
+        numberOfChannels: 2,
+        length: audioContext.sampleRate * 60, // Start with 60 seconds, will resize if needed
+        sampleRate: audioContext.sampleRate
+      });
+      
+      // Track our position in the final audio buffer
+      let currentTime = 0;
       const processedSegments: Blob[] = [];
       
+      console.log('Implementing sequential paragraph processing pipeline');
+      
+      // Process each paragraph sequentially
       for (let i = 0; i < segmentsWithMetadata.length; i++) {
         const segment = segmentsWithMetadata[i];
         console.log(`Processing paragraph ${i+1}/${segmentsWithMetadata.length}...`);
         console.log(`Paragraph mood: ${segment.metadata.mood}, genre: ${segment.metadata.genre}`);
         
-        // Generate narration for this paragraph using OpenAI
-        console.log(`Generating narration for paragraph ${i+1}...`);
+        // STEP 1: Generate TTS narration for this paragraph
+        console.log(`STEP 1: Generating TTS narration for paragraph ${i+1}...`);
         const audioBuffer = await generateAudio(segment.text);
         const narrationBlob = arrayBufferToBlob(audioBuffer);
-        console.log(`Narration generated for paragraph ${i+1}, size: ${narrationBlob.size} bytes`);
+        console.log(`TTS narration generated, size: ${narrationBlob.size} bytes`);
         
-        // Get background music based on paragraph's mood
-        console.log(`Selecting background music for paragraph ${i+1} with mood: ${segment.metadata.mood}`);
+        // STEP 2: Add silence from Firebase if not the last paragraph
+        console.log(`STEP 2: Adding silence after paragraph ${i+1}...`);
+        let narrationWithSilence = narrationBlob;
+        
+        if (i < segmentsWithMetadata.length - 1) {
+          // Fetch the silence MP3 from Firebase
+          const silenceUrl = 'https://firebasestorage.googleapis.com/v0/b/tune-tales-7bc34.appspot.com/o/BackgroundMusic%2FSilence.mp3?alt=media';
+          
+          try {
+            // Fetch the silence file
+            const silenceResponse = await fetch(silenceUrl);
+            const silenceBlob = await silenceResponse.blob();
+            console.log(`Silence file fetched, size: ${silenceBlob.size} bytes`);
+            
+            // Concatenate narration with silence
+            narrationWithSilence = await concatenateAudioBlobs([narrationBlob, silenceBlob]);
+            console.log(`Added silence to narration, new size: ${narrationWithSilence.size} bytes`);
+          } catch (error) {
+            console.error('Error fetching silence file:', error);
+            // Continue with just the narration if there's an error
+            console.log('Continuing with narration without silence');
+          }
+        }
+        
+        // STEP 3: Select background music based on paragraph's mood
+        console.log(`STEP 3: Selecting background music for paragraph ${i+1} with mood: ${segment.metadata.mood}`);
         const backgroundMusic = await getRandomBackgroundMusicForMetadata(segment.metadata);
-        console.log(`Selected music: ${backgroundMusic.name} (${backgroundMusic.category})`);
+        console.log('Selected music: ' + backgroundMusic.filename + ' (' + backgroundMusic.category + ')');
         
-        // Stitch narration with background music using browser audio utilities
-        console.log(`Stitching narration with background music for paragraph ${i+1}...`);
-        const processedSegment = await stitchAudioWithBackground(
-          narrationBlob,
+        // STEP 4: Add background music to narration with silence
+        console.log(`STEP 4: Adding background music to paragraph ${i+1}...`);
+        const paragraphWithMusic = await stitchAudioWithBackground(
+          narrationWithSilence,
           backgroundMusic.url,
           { 
-            backgroundVolume: 0.2, // 20% volume as specified
-            crossfadeDuration: 3    // 3-second crossfade
+            backgroundVolume: 0.15, // Reduced to 15% volume for more consistent background music
+            crossfadeDuration: 0,   // No crossfade
+            fadeInDuration: 0       // No fade-in effect
           }
         );
         
-        console.log(`Paragraph ${i+1} processing complete`);
-        processedSegments.push(processedSegment);
+        // Add the processed paragraph to our collection
+        processedSegments.push(paragraphWithMusic);
+        console.log(`Added paragraph ${i+1} to processed segments collection`);
+        
+        // Get the duration for logging purposes
+        const paragraphArrayBuffer = await paragraphWithMusic.arrayBuffer();
+        const paragraphBuffer = await audioContext.decodeAudioData(paragraphArrayBuffer);
+        console.log(`Paragraph ${i+1} final duration: ${paragraphBuffer.duration.toFixed(2)} seconds`);
+        
+        // No need for STEP 5 as we already added silence in STEP 2
+        
+        // Check if we need to resize our offline context
+        const paragraphDuration = paragraphBuffer.duration;
+        const requiredDuration = currentTime + paragraphDuration + pauseDuration;
+        
+        if (requiredDuration > estimatedTotalDuration) {
+          // We need to create a new offline context with the updated size
+          console.log(`Resizing audio context to accommodate longer duration: ${requiredDuration.toFixed(2)} seconds`);
+          
+          // Create new context with updated size
+          const newOfflineContext = new OfflineAudioContext({
+            numberOfChannels: 2,
+            length: Math.ceil(audioContext.sampleRate * (requiredDuration + 10)), // Add 10s buffer
+            sampleRate: audioContext.sampleRate
+          });
+          
+          // If we already have audio in the current context, render and transfer it
+          if (currentTime > 0) {
+            const previousBuffer = await offlineContext.startRendering();
+            const previousSource = newOfflineContext.createBufferSource();
+            previousSource.buffer = previousBuffer;
+            previousSource.connect(newOfflineContext.destination);
+            previousSource.start(0);
+          }
+          
+          // Update our context and total duration
+          offlineContext = newOfflineContext;
+          estimatedTotalDuration = requiredDuration + 10; // Add 10s buffer
+        }
+        
+        // STEP 5: Add the paragraph audio to our final buffer
+        console.log(`STEP 5: Adding paragraph ${i+1} audio to final buffer at position ${currentTime.toFixed(2)}s`);
+        const paragraphSource = offlineContext.createBufferSource();
+        paragraphSource.buffer = paragraphBuffer;
+        paragraphSource.connect(offlineContext.destination);
+        paragraphSource.start(currentTime);
+        
+        // Update current position
+        currentTime += paragraphBuffer.duration;
+        
+        // STEP 6: Add 7-second silence after each paragraph (except the last one)
+        if (i < segmentsWithMetadata.length - 1) {
+          console.log(`STEP 6: Adding EXACTLY ${pauseDuration}-second silence after paragraph ${i+1}`);
+          
+          // Create silence buffer for pause - exactly 7 seconds
+          const silenceBuffer = offlineContext.createBuffer(
+            2, // stereo
+            Math.ceil(offlineContext.sampleRate * pauseDuration),
+            offlineContext.sampleRate
+          );
+          
+          // Create and connect silence source
+          const silenceSource = offlineContext.createBufferSource();
+          silenceSource.buffer = silenceBuffer;
+          silenceSource.connect(offlineContext.destination);
+          silenceSource.start(currentTime);
+          
+          // Update current time to include silence duration
+          currentTime += pauseDuration;
+          console.log(`Current position after adding silence: ${currentTime.toFixed(2)} seconds`);
+        }
+        
+        // Store the processed segment for reference
+        processedSegments.push(paragraphWithMusic);
       }
       
       setSegmentAudios(processedSegments);
       
-      // Step 4: Concatenate all segments with crossfade
-      setCurrentStep('concatenating-segments');
+      // Step 4: Render the final audio with all paragraphs and silences
+      setCurrentStep('rendering-final-audio');
+      console.log(`Rendering final audio with total duration: ${currentTime.toFixed(2)} seconds`);
       
-      // If only one segment, no need to concatenate
-      let finalAudioBlob: Blob;
-      if (processedSegments.length === 1) {
-        finalAudioBlob = processedSegments[0];
-      } else {
-        // For multiple segments, we need to create paragraph timings
-        // and use stitchAudioWithMultipleBackgrounds
-        
-        // First, create a single narration blob from all segments
-        const narrationBlob = await concatenateAudioBlobs(processedSegments);
-        
-        // Estimate paragraph timings
-        const totalDuration = await getAudioDuration(narrationBlob);
-        const paragraphTimings: ParagraphTiming[] = [];
-        
-        let currentTime = 0;
-        for (let i = 0; i < segmentsWithMetadata.length; i++) {
-          const segment = segmentsWithMetadata[i];
-          // Estimate duration based on text length (rough approximation)
-          const segmentDuration = (segment.text.length / text.length) * totalDuration;
-          
-          // Calculate end time
-          const endTime = currentTime + segmentDuration;
-          
-          // Extract mood from metadata for this segment
-          const mood = segment.metadata.mood || 'neutral';
-          
-          // Make sure we're using the correct properties for ParagraphTiming
-          paragraphTimings.push({
-            index: i,
-            start: currentTime,
-            end: endTime,
-            text: segment.text,
-            mood: mood // Add mood to paragraph timing for background music selection
-          });
-          
-          // Update current time for next segment
-          currentTime = endTime;
-        }
-        
-        // Get background music for each paragraph based on its mood
-        console.log('Paragraph timings before music selection:', JSON.stringify(paragraphTimings, null, 2));
-        
-        const backgroundMusicByParagraph = await Promise.all(
-          paragraphTimings.map(async (paragraph, index) => {
-            console.log(`Selecting background music for paragraph ${index}:`, {
-              paragraphIndex: paragraph.index,
-              mood: paragraph.mood,
-              textPreview: paragraph.text.substring(0, 50) + '...'
-            });
-            
-            // Use the mood from paragraph timing to get appropriate background music
-            if (paragraph.mood) {
-              // Create a complete metadata object with required properties
-              const moodMetadata: ContentMetadata = { 
-                mood: paragraph.mood,
-                genre: "general", // Default genre
-                intensity: 5,     // Default mid-level intensity
-                tempo: "medium"   // Default tempo
-              };
-              console.log(`Using mood "${paragraph.mood}" for paragraph ${index}`);
-              try {
-                const music = await getRandomBackgroundMusicForMetadata(moodMetadata);
-                console.log(`Selected music for paragraph ${index}:`, {
-                  url: music.url,
-                  category: music.category,
-                  name: music.name
-                });
-                return music;
-              } catch (error) {
-                console.error(`Error getting background music for paragraph ${index}:`, error);
-                // Fallback to a default mood if the specific mood fails
-                console.log(`Falling back to default background music for paragraph ${index}`);
-                const fallbackMetadata: ContentMetadata = {
-                  mood: "neutral",
-                  genre: "general",
-                  intensity: 5,
-                  tempo: "medium"
-                };
-                const fallbackMusic = await getRandomBackgroundMusicForMetadata(fallbackMetadata);
-                return fallbackMusic;
-               }
-            } else {
-              // Fallback to the segment's metadata if no mood is available
-              console.log(`No mood found for paragraph ${index}, using segment metadata`);
-              const music = await getRandomBackgroundMusicForMetadata(segmentsWithMetadata[paragraph.index].metadata);
-              console.log(`Selected fallback music for paragraph ${index}:`, {
-                url: music.url,
-                category: music.category,
-                name: music.name
-              });
-              return music;
-            }
-          })
-        );
-        
-        // Stitch with crossfade
-        finalAudioBlob = await stitchAudioWithMultipleBackgrounds(
-          narrationBlob,
-          paragraphTimings,
-          backgroundMusicByParagraph,
-          { 
-            backgroundVolume: 0.2, // 20% volume for background music
-            crossfadeDuration: 3   // 3-second crossfade between tracks
-          }
-        );
-      }
+      // Render the final audio buffer
+      const renderedBuffer = await offlineContext.startRendering();
+      console.log(`Final audio rendered successfully, actual duration: ${renderedBuffer.duration.toFixed(2)} seconds`);
+      
+      // Convert to blob
+      const audioData = await audioBufferToWav(renderedBuffer);
+      const finalAudioBlob = new Blob([audioData], { type: 'audio/wav' });
+      console.log(`Final audio blob created, size: ${finalAudioBlob.size} bytes`);
       
       // Set the final audio
       setFinalAudio(finalAudioBlob);

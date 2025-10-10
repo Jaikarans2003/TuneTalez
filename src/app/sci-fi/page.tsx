@@ -3,50 +3,50 @@
 import React, { useEffect, useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
-import { FaHistory } from 'react-icons/fa';
+import { FaRocket } from 'react-icons/fa';
 import BookCard from '@/components/book/BookCard';
 
-export default function HistoryPage() {
-  const [historyBooks, setHistoryBooks] = useState<any[]>([]);
+export default function SciFiPage() {
+  const [scifiBooks, setScifiBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchHistoryBooks = async () => {
+    const fetchSciFiBooks = async () => {
       try {
-        // Query books with the "History" tag
+        // Query books with the "Sci-Fi" tag
         const booksRef = collection(db, 'books');
-        const historyBooksQuery = query(
+        const scifiBooksQuery = query(
           booksRef,
-          where('tags', 'array-contains', 'History')
+          where('tags', 'array-contains', 'Sci-Fi')
         );
         
-        const historySnapshot = await getDocs(historyBooksQuery);
+        const scifiSnapshot = await getDocs(scifiBooksQuery);
         
-        if (historySnapshot.empty) {
-          setHistoryBooks([]);
+        if (scifiSnapshot.empty) {
+          setScifiBooks([]);
           setLoading(false);
           return;
         }
         
         // Map the documents to the books array
-        const booksData = historySnapshot.docs.map(doc => ({
+        const booksData = scifiSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         
-        setHistoryBooks(booksData);
+        setScifiBooks(booksData);
       } catch (error) {
-        console.error('Error fetching history books:', error);
+        console.error('Error fetching sci-fi books:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHistoryBooks();
+    fetchSciFiBooks();
   }, []);
 
-  const handleDeleteBook = (book: any) => {
-    setHistoryBooks((prevBooks) => prevBooks.filter((b) => b.id !== book.id));
+  const handleDeleteBook = (id: string) => {
+    setScifiBooks((prevBooks) => prevBooks.filter((book) => book.id !== id));
   };
 
   if (loading) {
@@ -66,22 +66,22 @@ export default function HistoryPage() {
             <span className="text-primary-light uppercase tracking-wider text-sm font-semibold">Collection</span>
           </div>
           <h1 className="text-5xl font-bold text-white flex items-center">
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">History</span>
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">Science Fiction</span>
           </h1>
           <p className="text-gray-400 mt-4 max-w-2xl">
-            Explore our collection of historical books featuring significant events, influential figures, and fascinating stories from the past.
+            Explore our collection of science fiction books featuring futuristic worlds, advanced technology, space exploration, and thought-provoking concepts.
           </p>
         </div>
 
-        {historyBooks.length === 0 ? (
+        {scifiBooks.length === 0 ? (
           <div className="text-center py-16 bg-gradient-to-br from-[#1F1F1F] to-[#252525] rounded-2xl border border-gray-800 shadow-xl animate-fade-in">
-            <FaHistory className="h-16 w-16 mx-auto text-gray-600 mb-4 animate-slide-up" />
-            <h3 className="text-2xl font-bold text-white mb-2 animate-slide-up stagger-1">No historical books found</h3>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto animate-slide-up stagger-2">Our history collection is growing. Check back later for exciting new titles.</p>
+            <FaRocket className="h-16 w-16 mx-auto text-gray-600 mb-4 animate-slide-up" />
+            <h3 className="text-2xl font-bold text-white mb-2 animate-slide-up stagger-1">No science fiction books found</h3>
+            <p className="text-gray-400 mb-8 max-w-md mx-auto animate-slide-up stagger-2">Our sci-fi collection is growing. Check back later for exciting new titles.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {historyBooks.map((book, index) => (
+            {scifiBooks.map((book, index) => (
               <div key={book.id} className={`animate-fade-in stagger-${Math.min(index % 5 + 1, 5)}`}>
                 <BookCard book={book} />
               </div>

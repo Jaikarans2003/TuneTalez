@@ -110,7 +110,7 @@ export default function ContentManagement() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF0000]"></div>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export default function ContentManagement() {
         <div>
           <button 
             onClick={() => setShowBookForm(false)}
-            className="mb-4 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="mb-4 px-3 py-1 bg-black text-white border border-[#FF0000] rounded-md hover:bg-[#1F1F1F] transition-colors"
           >
             ← Back to Content Management
           </button>
@@ -133,26 +133,26 @@ export default function ContentManagement() {
       ) : (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Content Management</h2>
+            <h2 className="text-xl font-semibold text-[#FF0000]">Content Management</h2>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => {
                   setEditingBook(null);
                   setShowBookForm(true);
                 }}
-                className="px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors"
+                className="px-4 py-2 bg-[#FF0000] text-white rounded hover:bg-[#CC0000] transition-colors"
               >
                 Create New Book
               </button>
               <Link
                 href="/admin/fix-audio-urls"
-                className="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
+                className="px-4 py-2 bg-black text-[#FF0000] border border-[#FF0000] rounded hover:bg-[#1F1F1F] transition-colors"
               >
                 Fix Audio URLs
               </Link>
               <Link
                 href="/admin/test-audio"
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                className="px-4 py-2 bg-black text-[#FF0000] border border-[#FF0000] rounded hover:bg-[#1F1F1F] transition-colors"
               >
                 Test Audio
               </Link>
@@ -160,7 +160,7 @@ export default function ContentManagement() {
                 <input
                   type="text"
                   placeholder="Search content..."
-                  className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="px-4 py-2 border border-[#333333] rounded-lg bg-[#1F1F1F] text-white focus:outline-none focus:ring-2 focus:ring-[#FF0000]"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -169,13 +169,13 @@ export default function ContentManagement() {
           </div>
 
           <Tab.Group>
-            <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 dark:bg-gray-700 p-1 mb-4">
+            <Tab.List className="flex space-x-1 rounded-xl bg-black border border-[#333333] p-1 mb-4">
               <Tab
                 className={({ selected }) =>
                   `w-full rounded-lg py-2.5 text-sm font-medium leading-5 
                   ${selected 
-                    ? 'bg-white dark:bg-gray-800 shadow text-primary' 
-                    : 'text-gray-500 hover:bg-white/[0.12] hover:text-gray-700 dark:text-gray-400'
+                    ? 'bg-[#1F1F1F] shadow text-[#FF0000] border border-[#FF0000]' 
+                    : 'text-white hover:bg-[#1F1F1F] hover:text-[#FF0000]'
                   }`
                 }
               >
@@ -185,8 +185,8 @@ export default function ContentManagement() {
                 className={({ selected }) =>
                   `w-full rounded-lg py-2.5 text-sm font-medium leading-5 
                   ${selected 
-                    ? 'bg-white dark:bg-gray-800 shadow text-primary' 
-                    : 'text-gray-500 hover:bg-white/[0.12] hover:text-gray-700 dark:text-gray-400'
+                    ? 'bg-[#1F1F1F] shadow text-[#FF0000] border border-[#FF0000]' 
+                    : 'text-white hover:bg-[#1F1F1F] hover:text-[#FF0000]'
                   }`
                 }
               >
@@ -196,17 +196,17 @@ export default function ContentManagement() {
             <Tab.Panels>
               <Tab.Panel>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
+                  <table className="min-w-full bg-[#1F1F1F] rounded-lg overflow-hidden border border-[#333333]">
+                    <thead className="bg-black">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Book</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Author</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Episodes</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Book</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Author</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Episodes</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Created</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="divide-y divide-gray-700">
                       {filteredBooks.map((book) => (
                         <tr key={book.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -214,40 +214,40 @@ export default function ContentManagement() {
                               {book.thumbnailUrl ? (
                                 <img className="h-10 w-10 object-cover rounded mr-3" src={book.thumbnailUrl} alt="" />
                               ) : (
-                                <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
-                                  <span className="text-gray-500 dark:text-gray-300 text-sm">📚</span>
+                                <div className="h-10 w-10 rounded bg-black flex items-center justify-center mr-3">
+                                  <span className="text-[#FF0000] text-sm">📚</span>
                                 </div>
                               )}
-                              <div className="font-medium">{book.title}</div>
+                              <div className="font-medium text-white">{book.title}</div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap text-white">
                             {book.author}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs">
+                            <span className="px-2 py-1 bg-black text-[#FF0000] border border-[#FF0000] rounded-full text-xs">
                               {book.chapters?.length || 0} episodes
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap text-white">
                             {new Date(book.createdAt).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm flex space-x-3">
                             <button
                               onClick={() => handleEditBook(book)}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              className="text-[#FF0000] hover:text-white"
                             >
                               Edit
                             </button>
                             <Link
                               href={`/admin/manage-episodes/${book.id}`}
-                              className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                              className="text-[#FF0000] hover:text-white"
                             >
                               Episodes
                             </Link>
                             <button
                               onClick={() => handleDeleteBook(book)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                              className="text-[#FF0000] hover:text-white"
                             >
                               Delete
                             </button>
@@ -260,32 +260,32 @@ export default function ContentManagement() {
               </Tab.Panel>
               <Tab.Panel>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
+                  <table className="min-w-full bg-[#1F1F1F] rounded-lg overflow-hidden border border-[#333333]">
+                    <thead className="bg-black">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">PDF Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">PDF Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Created</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#FF0000] uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className="divide-y divide-gray-700">
                       {filteredPdfs.map((pdf) => (
                         <tr key={pdf.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="h-10 w-10 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center mr-3">
-                                <span className="text-gray-500 dark:text-gray-300 text-sm">📄</span>
+                              <div className="h-10 w-10 rounded bg-black flex items-center justify-center mr-3">
+                                <span className="text-[#FF0000] text-sm">📄</span>
                               </div>
-                              <div className="font-medium">{pdf.name || pdf.title}</div>
+                              <div className="font-medium text-white">{pdf.name || pdf.title}</div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap text-white">
                             {new Date(pdf.createdAt).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <button
                               onClick={() => handleDeletePdf(pdf)}
-                              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                              className="text-[#FF0000] hover:text-white"
                             >
                               Delete
                             </button>
