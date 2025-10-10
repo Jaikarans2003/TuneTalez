@@ -4,8 +4,7 @@
 
 import { ContentMetadata } from '@/services/openai';
 
-// OpenAI API key
-const OPENAI_API_KEY = process.env.NEXT_PUBLIC_OPENAI_API_KEY || '';
+// Use environment variables for API keys
 const TEXT_MODEL = 'gpt-3.5-turbo';
 
 /**
